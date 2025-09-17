@@ -1,1 +1,6 @@
-# krisa-remna-tg-bot
+# Telegram bot for KrisaVPN
+### Stack:
+* uvicorn
+* FastAPI
+* aiogram 
+* pydantic
