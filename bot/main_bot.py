@@ -1,5 +1,5 @@
 from aiogram import Bot, Dispatcher
-from bot.handlers import commands
+from bot.handlers import commands, callbacks
 from config.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -14,6 +14,7 @@ async def init_bot(settings):
 
     # Include routers
     dp.include_router(commands.router)
+    dp.include_router(callbacks.router)
 
     logger.info("Bot initialized successfully")
     return bot, dp

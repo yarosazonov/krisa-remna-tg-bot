@@ -15,7 +15,8 @@ def setup_logging(level: str = "INFO") -> None:
         level=getattr(logging, level.upper()),
         format=log_format,
         handlers=[
-            logging.StreamHandler(sys.stdout),
+            # Commented out this line to prevent logs from printing in the terminal
+            # logging.StreamHandler(sys.stdout),
             logging.FileHandler(log_file, encoding="utf-8")
         ]
     )
