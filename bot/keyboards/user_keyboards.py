@@ -2,7 +2,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 
-def get_main_menu_keyboard(show_refs: bool):
+def get_main_menu_keyboard(show_trial: bool):
     keyboard = [
         [InlineKeyboardButton(text="🔐 Моя подписка", callback_data="sub_menu")],
         [InlineKeyboardButton(text="🔥 Купить", callback_data="buy_menu")],
@@ -10,7 +10,7 @@ def get_main_menu_keyboard(show_refs: bool):
         [InlineKeyboardButton(text="🔔 Канал", url="https://t.me/krisavpn")]
     ]
 
-    if show_refs:
+    if show_trial:
         keyboard.insert(1, [InlineKeyboardButton(text="☀ Активировать пробный период", callback_data="trial_menu")])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)

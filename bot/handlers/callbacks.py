@@ -53,8 +53,8 @@ async def sub_callback(callback: types.CallbackQuery) -> None:
             api_token=settings.REMNAWAVE_API_TOKEN
         )
 
-        # API request to remna panel
-        user_data = await remnawave_service.get_user_by_telegram_id(telegram_id)
+        # API request to the remna panel
+        user_data = await remnawave_service.get_formatted_status(telegram_id)
 
         if user_data is None:
             await callback.message.edit_text(
@@ -66,12 +66,8 @@ async def sub_callback(callback: types.CallbackQuery) -> None:
             )
             return
 
-        # Formatting the API response
-        status_text = remnawave_service.format_subscription_status(user_data)
-
-
         await callback.message.edit_text(
-            f"🔐 <b>Ваша подписка:</b>\n\n{status_text}",
+            f"🔐 <b>Ваша подписка:</b>\n\n{user_data}",
             parse_mode="HTML",
             reply_markup=get_sub_keyboard()
         )
@@ -118,6 +114,20 @@ async def trial_callback(callback: types.CallbackQuery):
 @router.callback_query(F.data == "trial_menu_used")
 async def trial_used_callback(callback: types.CallbackQuery):
     user_id = callback.from_user.id
+    if callback.from_user.username:
+        user_tag = callback.from_user.username
+    else:
+        user_tag = 'tg'
+    
+    settings = get_settings()
+
+    remnawave_service = RemnawaveService(
+            api_url=settings.REMNAWAVE_API_URL,
+            api_token=settings.REMNAWAVE_API_TOKEN
+        )
+
+    result = await remnawave_service.grant_trial(tg_id=user_id, tg_tag=user_tag, trial_days=settings.TRIAL_DAYS, trial_traffic=settings.TRIAL_TRAFFIC_GB, internal_squads=settings.SQUADS)
+    
     await revoke_trial(user_id)
     await callback.message.edit_text(
         "Ты попробовал крысу!",

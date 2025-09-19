@@ -9,11 +9,14 @@ logger = get_logger(__name__)
 
 class Settings(BaseSettings):
     BOT_TOKEN: str
+    ADMIN_ID: int
     DOMAIN: str
     WEBHOOK_PATH: str
     PORT: int
     HOST: str
-
+    SQUADS: str
+    TRIAL_DAYS: int
+    TRIAL_TRAFFIC_GB: int
     REMNAWAVE_API_URL: str
     REMNAWAVE_API_TOKEN: str
 
