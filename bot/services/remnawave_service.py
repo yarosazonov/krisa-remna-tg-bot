@@ -60,11 +60,14 @@ class RemnawaveService:
 
             # Format basic info
             status_text = f"Пользователь: <b>{username}</b>\n"
-            status_text += f"Статус: {'✅ ' + ('<b>Активна</b>' if status == 'ACTIVE' else status) if status == 'ACTIVE' else '❌ ' + ('<b>Неактивна</b>' if status == 'INACTIVE' else status)}\n"
-
+            if status == "ACTIVE":
+                status_text += "Статус: ✅ <b>Активна</b>\n"
+            elif status == "INACTIVE":
+                status_text += "Статус: ❌ <b>Неактивна</b>\n"
+            else:
+                status_text += f"Статус: {status}\n"
             # Add expiry date if available
             if 'expireAt' in user_data and user_data['expireAt']:
-                from datetime import datetime, timezone, timedelta
                 try:
                     # Parse ISO format date
                     expire_date = datetime.fromisoformat(user_data['expireAt'].replace('Z', '+00:00'))
@@ -101,8 +104,153 @@ class RemnawaveService:
             return "❌ Ошибка при форматировании информации о подписке"
         
 
+    # User creating internal method
+    #
+    #
+    async def _create_user(self, tg_id: int, tg_tag: str, subscription_days: int, traffic: int, internal_squads: str, trafficLimitStrategy: str = "MONTH"):
+        """
+        Creates a new user associated with a Telegram ID
+        Args:
+            tg_id,
+            tg_tag,
+            subscription_days,
+            traffic,
+            internal_squads,
+            trafficLimitStrategy: str = "MONTH"
+        
+        Returns:
+            dict | None: JSON response from the API or None if failed
+        """
+        try:
+            async with httpx.AsyncClient() as client:
+                url = f"{self.api_url}/api/users"
 
-    async def get_formatted_status(self, tg_id: int) -> str:
+                expire_at = (datetime.now(timezone.utc) + timedelta(days=subscription_days)).isoformat().replace("+00:00", "Z")
+                username = f"{tg_tag}_{tg_id}"
+                trafficLimitBytes = traffic * 1024**3
+                squads = [s.strip() for s in internal_squads.split(",") if s.strip()]
+
+                payload = {
+                    "telegramId": tg_id,
+                    "username": username,
+                    "status": "ACTIVE",
+                    "expireAt": expire_at,
+                    "trafficLimitBytes": trafficLimitBytes,
+                    "activeInternalSquads": squads,
+                    "trafficLimitStrategy": trafficLimitStrategy
+                }
+
+                logger.info(f"Creating a new user with id: {tg_id}")
+
+                response = await client.post(url, headers=self.headers, json=payload, timeout=10.0)
+
+                if response.status_code == 201:
+                    data = response.json()
+                    logger.info(f"User created: {data}")
+                    return data
+                else:
+                    logger.error(f"API request failed [{response.status_code}]: {response.text}")
+                    return None
+
+        except httpx.TimeoutException:
+            logger.error(f"Timeout while creating trial user for tg_id: {tg_id}")
+            return None
+        except httpx.RequestError as e:
+            logger.error(f"Request error while creating trial user for tg_id: {tg_id}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error while creating trial user for tg_id: {tg_id}: {e}")
+            return None
+
+
+    # User update internal method
+    #
+    #
+    async def _update_user(
+        self,
+        uuid: str,
+        activeInternalSquads: Optional[list[str]] = None,
+        description: Optional[str] = None,
+        email: Optional[str] = None,
+        expireAt: Optional[datetime] = None,
+        hwidDeviceLimit: Optional[int] = None,
+        status: Optional[str] = None,  # must be "ACTIVE" or "DISABLED"
+        tag: Optional[str] = None,     # max length 16, pattern ^[A-Z0-9_]+$
+        telegramId: Optional[int] = None,
+        trafficLimitBytes: Optional[int] = None,
+        trafficLimitStrategy: str = "MONTH"  # default
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Updates a user in the Remnawave panel.
+
+        Args:
+            uuid (str): User UUID (required)
+            activeInternalSquads (list[str]): Internal squads to assign
+            description (str | None): User description
+            email (str | None): Email address
+            expireAt (datetime | None): Expiration datetime (UTC)
+            hwidDeviceLimit (int | None): Max device limit
+            status (str | None): "ACTIVE" or "DISABLED"
+            tag (str | None): User tag (max 16 chars, pattern ^[A-Z0-9_]+$)
+            telegramId (int | None): Telegram ID
+            trafficLimitBytes (int | None): Traffic limit in bytes (0 = unlimited)
+            trafficLimitStrategy (str): Reset strategy ("NO_RESET", "DAY", "WEEK", "MONTH")
+
+        Returns:
+            dict | None: JSON response from API, or None on failure
+        """
+        try:
+            async with httpx.AsyncClient() as client:
+                url = f"{self.api_url}/api/users/"
+
+                payload: Dict[str, Any] = {"uuid": uuid}
+
+                if activeInternalSquads is not None:
+                    payload["activeInternalSquads"] = activeInternalSquads
+                if description is not None:
+                    payload["description"] = description
+                if email is not None:
+                    payload["email"] = email
+                if expireAt is not None:
+                    # API requires ISO8601 format with Z
+                    payload["expireAt"] = expireAt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+                if hwidDeviceLimit is not None:
+                    payload["hwidDeviceLimit"] = hwidDeviceLimit
+                if status is not None:
+                    payload["status"] = status
+                if tag is not None:
+                    payload["tag"] = tag
+                if telegramId is not None:
+                    payload["telegramId"] = telegramId
+                if trafficLimitBytes is not None:
+                    payload["trafficLimitBytes"] = trafficLimitBytes
+                if trafficLimitStrategy is not None:
+                    payload["trafficLimitStrategy"] = trafficLimitStrategy
+
+                logger.info(f"Updating user {uuid} with payload: {payload}")
+
+                response = await client.patch(url, headers=self.headers, json=payload, timeout=10.0)
+
+                if response.status_code == 200:
+                    data = response.json()
+                    logger.info(f"User {uuid} updated successfully: {data}")
+                    return data
+                else:
+                    logger.error(f"API request failed [{response.status_code}]: {response.text}")
+                    return None
+
+        except httpx.TimeoutException:
+            logger.error(f"Timeout while updating user {uuid}")
+            return None
+        except httpx.RequestError as e:
+            logger.error(f"Request error while updating user {uuid}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error while updating user {uuid}: {e}")
+            return None
+
+
+    async def get_formatted_status(self, tg_id: int) -> Optional[str]:
         user_data = await self._get_user_by_telegram_id(tg_id)
         if not user_data:
             return None
@@ -211,41 +359,93 @@ class RemnawaveService:
             dict | None: JSON response from the API or None if failed
         """
         try:
-            async with httpx.AsyncClient() as client:
-                url = f"{self.api_url}/api/users"
-
-                expire_at = (datetime.now(timezone.utc) + timedelta(days=trial_days)).isoformat().replace("+00:00", "Z")
-                username = f"{tg_tag}_{tg_id}"
-                trafficLimitBytes = trial_traffic * 1024**3
-                squads = [s.strip() for s in internal_squads.split(",") if s.strip()]
-
-                payload = {
-                    "telegramId": tg_id,
-                    "username": username,
-                    "status": "ACTIVE",
-                    "expireAt": expire_at,
-                    "trafficLimitBytes": trafficLimitBytes,
-                    "activeInternalSquads": squads
-                }
-
-                logger.info(f"Granting a trial to a user with id: {tg_id}")
-
-                response = await client.post(url, headers=self.headers, json=payload, timeout=10.0)
-
-                if response.status_code == 201:
-                    data = response.json()
-                    logger.info(f"Trial user created: {data}")
-                    return data
-                else:
-                    logger.error(f"API request failed [{response.status_code}]: {response.text}")
-                    return None
-
-        except httpx.TimeoutException:
-            logger.error(f"Timeout while creating trial user for tg_id: {tg_id}")
-            return None
-        except httpx.RequestError as e:
-            logger.error(f"Request error while creating trial user for tg_id: {tg_id}: {e}")
-            return None
+            return await self._create_user(tg_id=tg_id, tg_tag=tg_tag, subscription_days=trial_days, traffic=trial_traffic, internal_squads=internal_squads)
         except Exception as e:
             logger.error(f"Unexpected error while creating trial user for tg_id: {tg_id}: {e}")
+            return None
+
+
+
+    # Handles the successful payment
+    #
+    #
+    async def handle_payment(
+        self,
+        tg_id: int,
+        tg_tag: str,
+        subscription_days: int,
+        traffic: int,
+        internal_squads: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Handles user subscription payment.
+        - If the user does not exist in the panel, they are created.
+        - If the user exists, their expiry time is extended.
+
+        Args:
+            tg_id (int): Telegram user ID
+            tg_tag (str): Telegram username/tag
+            subscription_days (int): Number of days to add
+            traffic (int): Traffic limit in GB
+            internal_squads (str): Comma-separated squads
+
+        Returns:
+            dict | None: API response (created/updated user) or None on failure
+        """
+        try:
+            # Step 1: Try to fetch user by tg_id
+            user_data = await self._get_user_by_telegram_id(tg_id)
+
+            if not user_data:
+                # Step 2: If not found → create new user
+                logger.info(f"User {tg_id} not found in panel, creating a new one...")
+                return await self._create_user(
+                    tg_id=tg_id,
+                    tg_tag=tg_tag,
+                    subscription_days=subscription_days,
+                    traffic=traffic,
+                    internal_squads=internal_squads
+                )
+
+            # Step 3: If found → extend subscription
+            logger.info(f"User {tg_id} found in panel, extending subscription...")
+
+            uuid = user_data.get("uuid")
+            if not uuid:
+                logger.error(f"Cannot update user {tg_id} — missing UUID in API response")
+                return None
+
+            # Parse current expiration date (if any)
+            now_utc = datetime.now(timezone.utc)
+            expire_at_str = user_data.get("expireAt")
+            if expire_at_str:
+                try:
+                    expire_at = datetime.fromisoformat(expire_at_str.replace("Z", "+00:00"))
+                except ValueError:
+                    logger.error(f"Invalid expireAt format for user {tg_id}: {expire_at_str}")
+                    expire_at = now_utc
+            else:
+                expire_at = now_utc
+
+            # If subscription is still active, add on top; otherwise, start fresh
+            if expire_at > now_utc:
+                new_expire_at = expire_at + timedelta(days=subscription_days)
+            else:
+                new_expire_at = now_utc + timedelta(days=subscription_days)
+
+            # Convert traffic GB → bytes
+            traffic_limit_bytes = traffic * 1024**3
+
+            return await self._update_user(
+                uuid=uuid,
+                expireAt=new_expire_at,
+                trafficLimitBytes=traffic_limit_bytes,
+                telegramId=tg_id,
+                tag=tg_tag[:16].upper(),  # ensure max 16 chars, uppercase
+                status="ACTIVE",
+                activeInternalSquads=[s.strip() for s in internal_squads.split(",") if s.strip()]
+            )
+
+        except Exception as e:
+            logger.error(f"Unexpected error while handling payment for tg_id={tg_id}: {e}")
             return None

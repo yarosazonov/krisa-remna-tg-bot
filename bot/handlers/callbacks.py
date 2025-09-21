@@ -109,7 +109,7 @@ async def trial_callback(callback: types.CallbackQuery, telegram_id: int):
     user = await get_user(telegram_id)
     
     await callback.message.edit_text(
-        "Попробуй крысу!",
+        "🐀 Попробуй Крысу бесплатно и без условий!",
         parse_mode="HTML",
         reply_markup=get_trial_keyboard(is_eligible=user.eligible_for_trial)
     )
@@ -133,10 +133,15 @@ async def trial_used_callback(callback: types.CallbackQuery, telegram_id: int, r
         internal_squads=settings.SQUADS)
 
     await revoke_trial(telegram_id)
+    # Creating a custom keyboard on the fly
+    keyboard_buttons = [
+        [InlineKeyboardButton(text="🔐 Моя подписка", callback_data="sub_menu")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="main_menu")]
+    ]
     await callback.message.edit_text(
-        "Ты попробовал крысу!",
+        "🎉 Пробный период активирован!",
         parse_mode="HTML",
-        reply_markup=get_trial_keyboard(is_eligible=False)
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
     )
     await callback.answer()
 
@@ -179,12 +184,12 @@ async def payment_callback(callback: types.CallbackQuery, telegram_id: int, yook
         sub_info = subscription_map[subscription_period]
 
         await callback.message.edit_text("⏳ Создаю платеж...")
-
+        user_tag = callback.from_user.username
         # Create payment metadata
         metadata = {
             "telegram_id": str(telegram_id),
-            "subscription_months": str(sub_info["months"]),
-            "subscription_type": subscription_period
+            "user_tag": str(user_tag),
+            "subscription_months": str(sub_info["months"])
         }
 
         # Create payment

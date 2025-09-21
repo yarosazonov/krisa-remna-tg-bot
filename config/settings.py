@@ -8,17 +8,25 @@ logger = get_logger(__name__)
 
 
 class Settings(BaseSettings):
+    # Bot specific
     BOT_TOKEN: str
     ADMIN_ID: int
+
+    # FastAPI
     DOMAIN: str
     WEBHOOK_PATH: str
+    YOOKASSA_WEBHOOK_PATH: str
     PORT: int
     HOST: str
-    SQUADS: str
-    TRIAL_DAYS: int
-    TRIAL_TRAFFIC_GB: int
+
+    # Remna
     REMNAWAVE_API_URL: str
     REMNAWAVE_API_TOKEN: str
+    SQUADS: str
+
+    # Trial specs
+    TRIAL_DAYS: int
+    TRIAL_TRAFFIC_GB: int
 
     # YooKassa payment system settings
     YOOKASSA_SHOP_ID: Optional[str] = None
@@ -29,6 +37,8 @@ class Settings(BaseSettings):
     YOOKASSA_PAYMENT_MODE: str = "full_prepayment"
     YOOKASSA_PAYMENT_SUBJECT: str = "service"
 
+    # Subscription parameters
+    MONTHLY_TRAFFIC_GB: int
     ENABLE_1_MONTH: bool
     RUB_PRICE_1_MONTH: int
 

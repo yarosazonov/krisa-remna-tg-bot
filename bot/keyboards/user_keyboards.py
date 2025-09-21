@@ -44,12 +44,16 @@ def get_sub_keyboard(is_sub_found: bool = True):
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
+
+# Trial menu keyboard
+#
+#
 def get_trial_keyboard(is_eligible: bool):
     keyboard = [
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="main_menu")]
     ]
 
     if is_eligible:
-        keyboard.insert(0, [InlineKeyboardButton(text="✅ Юзануть триалку", callback_data="trial_menu_used")])
+        keyboard.insert(0, [InlineKeyboardButton(text="✅ Активировать пробный период", callback_data="trial_menu_used")])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
