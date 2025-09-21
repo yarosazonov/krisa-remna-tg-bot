@@ -6,18 +6,19 @@ from db.db_setup import add_user, get_user
 from bot.keyboards.user_keyboards import get_main_menu_keyboard
 from config.settings import get_settings
 from bot.services.remnawave_service import RemnawaveService
+from bot.middlewares.id_check_middleware import UserIDMiddleware
 
 logger = get_logger(__name__)
 router = Router()
+# Register the middlewares
+router.message.middleware(UserIDMiddleware())
 
 
 
 @router.message(Command("start"))
-async def start_command(message: types.Message) -> None:
+async def start_command(message: types.Message, telegram_id: int) -> None:
     """Handle /start command."""
     try:
-        telegram_id = message.from_user.id
-        
         logger.info(f"User {telegram_id} started the bot")
 
         welcome_text = (
@@ -40,21 +41,15 @@ async def start_command(message: types.Message) -> None:
 
 
 @router.message(Command("sync"))
-async def start_command(message: types.Message) -> None:
-    tg_id = message.from_user.id
-    logger.info(f"User {tg_id} requested /sync")
+async def sync_command(message: types.Message, telegram_id: int, remnawave_service: RemnawaveService) -> None:
+    logger.info(f"User {telegram_id} requested /sync")
     settings = get_settings()
     admin_id = settings.ADMIN_ID
 
-    if tg_id != admin_id:
+    if telegram_id != admin_id:
         await message.reply("❌ Ты не админ, тебе нельзя!")
         return
-    
-    remnawave_service = RemnawaveService(
-            api_url=settings.REMNAWAVE_API_URL,
-            api_token=settings.REMNAWAVE_API_TOKEN
-        )
-    
+
     total, with_ids = await remnawave_service.sync_with_panel()
     await message.reply(f"✅ Синхронизация с панелью прошла успешно. Всего найдено юзеров: {total}, из них имеют тг id: {with_ids}")
 

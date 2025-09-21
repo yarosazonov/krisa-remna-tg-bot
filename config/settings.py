@@ -20,6 +20,26 @@ class Settings(BaseSettings):
     REMNAWAVE_API_URL: str
     REMNAWAVE_API_TOKEN: str
 
+    # YooKassa payment system settings
+    YOOKASSA_SHOP_ID: Optional[str] = None
+    YOOKASSA_SECRET_KEY: Optional[str] = None
+    YOOKASSA_RETURN_URL: Optional[str] = None
+    YOOKASSA_DEFAULT_RECEIPT_EMAIL: Optional[str] = None
+    YOOKASSA_VAT_CODE: int = 1
+    YOOKASSA_PAYMENT_MODE: str = "full_prepayment"
+    YOOKASSA_PAYMENT_SUBJECT: str = "service"
+
+    ENABLE_1_MONTH: bool
+    RUB_PRICE_1_MONTH: int
+
+    ENABLE_3_MONTHS: bool
+    RUB_PRICE_3_MONTHS: int
+
+    ENABLE_6_MONTHS: bool
+    RUB_PRICE_6_MONTHS: int
+
+
+
     # decorator that let's call the method like an attribute
     @property
     def WEBHOOK_URL(self) -> str:
