@@ -5,3 +5,4 @@
 * aiogram 
 * pydantic
 * SQLite (with SQLAlchemy and aiosqlite)
+* Docker
