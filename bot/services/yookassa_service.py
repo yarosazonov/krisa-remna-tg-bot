@@ -232,6 +232,9 @@ class YooKassaService:
                     "payment_method_type":
                     payment_info_yk.payment_method.type
                     if payment_info_yk.payment_method else None,
+                    "confirmation_url":
+                    payment_info_yk.confirmation.confirmation_url
+                    if payment_info_yk.confirmation else None,
                     "test_mode":
                     payment_info_yk.test
                     if hasattr(payment_info_yk, 'test') else None

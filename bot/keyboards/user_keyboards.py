@@ -23,11 +23,11 @@ def get_buy_keyboard(enable_1_month: bool, enable_3_months: bool, enable_6_month
     ]
 
     if enable_1_month:
-        keyboard.insert(0, [InlineKeyboardButton(text=f"💵 1 месяц: {rub_price_1_month} {currency}", callback_data="main_menu")])
+        keyboard.insert(0, [InlineKeyboardButton(text=f"💵 1 месяц: {rub_price_1_month} {currency}", callback_data="pay_1_month")])
     if enable_3_months:
-        keyboard.insert(1, [InlineKeyboardButton(text=f"💰 3 месяца: {rub_price_3_months} {currency}", callback_data="main_menu")])
+        keyboard.insert(1, [InlineKeyboardButton(text=f"💰 3 месяца: {rub_price_3_months} {currency}", callback_data="pay_3_months")])
     if enable_6_months:
-        keyboard.insert(2, [InlineKeyboardButton(text=f"👑 6 месяцев: {rub_price_6_months} {currency}", callback_data="main_menu")])
+        keyboard.insert(2, [InlineKeyboardButton(text=f"👑 6 месяцев: {rub_price_6_months} {currency}", callback_data="pay_6_months")])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
