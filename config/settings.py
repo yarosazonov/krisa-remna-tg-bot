@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     # FastAPI
     DOMAIN: str
     WEBHOOK_PATH: str
+    WEBHOOK_SECRET: str
     YOOKASSA_WEBHOOK_PATH: str
     PORT: int
     HOST: str

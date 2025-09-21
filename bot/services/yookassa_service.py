@@ -2,12 +2,37 @@ import uuid
 import logging
 import asyncio
 from typing import Optional, Dict, Any, List
+import ipaddress
 
 from yookassa import Configuration, Payment as YooKassaPayment
 from yookassa.domain.request.payment_request_builder import PaymentRequestBuilder
 from yookassa.domain.common.confirmation_type import ConfirmationType
 
 from config.settings import Settings
+
+    
+
+YOOKASSA_IP_RANGES = [
+    "185.71.76.0/27",
+    "185.71.77.0/27",
+    "77.75.153.0/25",
+    "77.75.156.11/32",
+    "77.75.156.35/32",
+    "77.75.154.128/25",
+    "2a02:5180::/32"
+]
+
+
+
+# Check yookassa ip ranges
+#
+#
+def ip_in_ranges(ip: str) -> bool:
+    for cidr in YOOKASSA_IP_RANGES:
+        if ipaddress.ip_address(ip) in ipaddress.ip_network(cidr):
+            return True
+    return False
+
 
 
 class YooKassaService:
@@ -249,3 +274,5 @@ class YooKassaService:
                 f"YooKassa get payment info for {payment_id_in_yookassa} failed: {e}",
                 exc_info=True)
             return None
+
+

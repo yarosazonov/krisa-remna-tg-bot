@@ -1,11 +1,11 @@
 import asyncio
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Header
 from aiogram import types
 from contextlib import asynccontextmanager
 from bot.main_bot import init_bot
 from config.logging_config import get_logger
 from bot.handlers.payment import handle_yookassa_update
-from bot.services.yookassa_service import YooKassaService
+from bot.services.yookassa_service import YooKassaService, ip_in_ranges
 from bot.services.remnawave_service import RemnawaveService
 
 logger = get_logger(__name__)
@@ -30,7 +30,7 @@ def create_app(settings):
         bot_username_for_default_return=None,
         settings_obj=settings
     )
-    # this decorator treats everything before yield as __enter__() and after yeild as __exit__()
+    # This decorator treats everything before yeild as __enter__() and after yeild as __exit__()
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         """Manage bot startup and shutdown."""
@@ -38,7 +38,7 @@ def create_app(settings):
         try:
             logger.info("Starting bot setup...")
             bot, dp = await init_bot(settings, remnawave_service=remnawave_service, yookassa_service=yookassa_service)
-            await bot.set_webhook(settings.WEBHOOK_URL)
+            await bot.set_webhook(settings.WEBHOOK_URL, secret_token=settings.WEBHOOK_SECRET)
             logger.info(f"Webhook set to: {settings.WEBHOOK_URL}")
             yield
         except Exception as e:
@@ -64,8 +64,12 @@ def create_app(settings):
     #
     #
     @app.post(settings.WEBHOOK_PATH)
-    async def webhook(request: Request):
+    async def webhook(request: Request, x_telegram_bot_api_secret_token: str = Header()):
         """Handle incoming Telegram updates via webhook."""
+        if x_telegram_bot_api_secret_token != settings.WEBHOOK_SECRET:
+            logger.warning("Unauthorized Telegram webhook request")
+            raise HTTPException(status_code=403, detail="Forbidden")
+        
         try:
             logger.debug("Received webhook request")
             
@@ -98,7 +102,7 @@ def create_app(settings):
     async def yookassa_webhook(request: Request):
         """Handle incoming yookassa payment updates"""
         try:
-            logger.debug("Received Yookassa webhood request")
+            logger.debug("Received Yookassa webhook request")
             update_data = await request.json()
             event = update_data.get("event")
             obj = update_data.get("object", {})
