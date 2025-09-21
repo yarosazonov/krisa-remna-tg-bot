@@ -91,7 +91,7 @@ def create_app(settings):
 
 
 
-    # Yookassa webhood
+    # Yookassa webhook
     #
     #
     @app.post(settings.YOOKASSA_WEBHOOK_PATH)
