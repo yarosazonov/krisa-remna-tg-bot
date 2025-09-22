@@ -1,0 +1,17 @@
+# Example logrotate config 
+
+# To create local state file avoiding the ownership hassle:
+# logrotate -f ./logs/bot-logrotate.conf -s ./logs/logrotate.status
+
+# Cron setup:
+# crontab -e
+# @daily /usr/sbin/logrotate /absolute/path/bot-logrotate.conf
+/absolute/path/bot.log {
+    daily                  
+    missingok              
+    rotate 7               
+    compress               
+    delaycompress          
+    notifempty             
+    copytruncate           
+}
