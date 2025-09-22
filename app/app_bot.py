@@ -1,4 +1,5 @@
 import asyncio
+import json
 from fastapi import FastAPI, Request, HTTPException, Header
 from aiogram import types
 from contextlib import asynccontextmanager
@@ -7,6 +8,7 @@ from config.logging_config import get_logger
 from bot.handlers.payment import handle_yookassa_update
 from bot.services.yookassa_service import YooKassaService, ip_in_ranges
 from bot.services.remnawave_service import RemnawaveService
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 logger = get_logger(__name__)
 
@@ -115,4 +117,59 @@ def create_app(settings):
         except Exception as e:
             logger.error(f"Error processing YooKassa webhook: {e}")
             raise HTTPException(status_code=500, detail="Internal server error")
+        
+
+        
+    # Remnawave webhook
+    #
+    #
+    @app.post(settings.REMNAWAVE_WEBHOOK_PATH)
+    async def remnawave_webhook(request: Request):
+        body = await request.body()
+        signature = request.headers.get("X-Remnawave-Signature")
+        
+        if not remnawave_service.validate_webhook(body=body, signature=signature, webhook_secret_header=settings.REMNAWAVE_WEBHOOK_SECRET_HEADER):
+            raise HTTPException(status_code=401, detail="Invalid webhook signature")
+        
+        payload = json.loads(body)
+        event = payload.get("event")
+        logger.warning(f"Remna webhook event: {event}")
+        if event not in ("user.expires_in_24_hours", "user.expired", "user.limited"):
+            return {"status": "ok"}
+        user = payload.get("data", {})
+        telegram_id = user.get("telegramId")
+
+        if not telegram_id:
+            logger.warning(f"No Telegram ID for user {user.get('uuid')}, skipping message.")
+            return {"status": "ok"}
+
+        # Message construction based on the event
+        message_text = None
+        
+        # Message keyboard
+        keyboard_buttons = []
+        keyboard_buttons.append([InlineKeyboardButton(text="💬 Написать в поддержку", url="https://t.me/yarosazonov")])
+        if event in ("user.expires_in_24_hours", "user.expired"):
+            keyboard_buttons.insert(0, [InlineKeyboardButton(text="🔥 Продлить подписку", callback_data="buy_menu")])
+        keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
+        
+        # Message text
+        if event == "user.expires_in_24_hours":
+            message_text = ("✋ Добрый день, ровно через 24 часа ваша подписка истекает, не забудьте продлить!🤝")
+        elif event == "user.expired":
+            message_text = ("🔔 Здравствуйте, ваша подписка только что истекла!\n"
+            "Надеюсь что вы довольны сервисом и останетесь с нами.\n"
+            "Если у вас есть замечания, пожалуйста, напишите в поддержку.\nХорошего дня!🎈"
+            )
+        elif event == "user.limited":
+            message_text = ("🔔 Добрый день! У вас кончился траффик.🤯\nЕсли вы хотите приобрести дополнительный пакет - обратитесь в поддержку🤝")
+
+        # Sending the message
+        await bot.send_message(chat_id=int(telegram_id), text=message_text, reply_markup=keyboard)
+        return {"status": "ok"}
+
+
+
     return app
+
+

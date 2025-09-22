@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     REMNAWAVE_API_URL: str
     REMNAWAVE_API_TOKEN: str
     SQUADS: str
+    REMNAWAVE_WEBHOOK_PATH: str
+    REMNAWAVE_WEBHOOK_SECRET_HEADER: str
 
     # Trial specs
     TRIAL_DAYS: int

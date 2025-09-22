@@ -1,3 +1,6 @@
+import hashlib
+import hmac
+import json
 import httpx
 from typing import Optional, Dict, Any
 from config.logging_config import get_logger
@@ -449,3 +452,35 @@ class RemnawaveService:
         except Exception as e:
             logger.error(f"Unexpected error while handling payment for tg_id={tg_id}: {e}")
             return None
+
+
+
+    # Validates panel webhook
+    #
+    #
+    def validate_webhook(self, body, signature, webhook_secret_header):
+        """Validate webhook signature"""
+        logger.warning("Remna webhook validation started")
+        
+        if isinstance(body, bytes):
+            body = body.decode("utf-8")
+
+        if isinstance(body, str):
+            original_body = body
+            logger.warning("Body is string, parsing for logging...")
+            try:
+                parsed_body = json.loads(body)
+            except json.JSONDecodeError as e:
+                logger.warning("Failed to parse body: %s", e)
+                return False
+        else:
+            original_body = json.dumps(body, separators=(',', ':'))
+            parsed_body = body
+
+        computed_signature = hmac.new(
+            webhook_secret_header.encode('utf-8'),
+            original_body.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        logger.warning("Remna webhook validated")
+        return hmac.compare_digest(computed_signature, signature)

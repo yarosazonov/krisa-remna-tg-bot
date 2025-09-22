@@ -6,7 +6,7 @@ def get_main_menu_keyboard(show_trial: bool):
     keyboard = [
         [InlineKeyboardButton(text="🔐 Моя подписка", callback_data="sub_menu")],
         [InlineKeyboardButton(text="🔥 Купить", callback_data="buy_menu")],
-        [InlineKeyboardButton(text="💬 Написать в поддержку", url="https://t.me/yarosazonov")],
+        [InlineKeyboardButton(text="💬 Поддержка", url="https://t.me/yarosazonov")],
         [InlineKeyboardButton(text="🔔 Канал", url="https://t.me/krisavpn")]
     ]
 

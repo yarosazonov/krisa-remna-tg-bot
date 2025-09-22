@@ -22,7 +22,7 @@ async def start_command(message: types.Message, telegram_id: int) -> None:
         logger.info(f"User {telegram_id} started the bot")
 
         welcome_text = (
-            "👋 Добро пожаловать в <b>KrisaVPN</b> bot!"
+            "👋 Добро пожаловать в <b>КрысаВПН</b> bot 2.0!\n"
         )
         user = await get_user(telegram_id=telegram_id)
         if user:
