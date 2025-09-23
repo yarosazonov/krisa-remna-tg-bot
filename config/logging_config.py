@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import RotatingFileHandler
 import sys
 from pathlib import Path
 
@@ -10,14 +11,19 @@ def setup_logging(level: str = "INFO") -> None:
     log_dir = Path('logs')
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / 'bot.log'
-
+    
     logging.basicConfig(
         level=getattr(logging, level.upper()),
         format=log_format,
         handlers=[
             # Commented out this line to prevent logs from printing in the terminal
             # logging.StreamHandler(sys.stdout),
-            logging.FileHandler(log_file, encoding="utf-8")
+            RotatingFileHandler(
+                log_file, 
+                maxBytes=5*1024*1024,  # 5 MB
+                backupCount=5,          # Keep 5 backup files
+                encoding="utf-8"
+            )
         ]
     )
 
@@ -25,6 +31,7 @@ def setup_logging(level: str = "INFO") -> None:
     logging.getLogger("aiogram").setLevel(logging.INFO)
     logging.getLogger("uvicorn").setLevel(logging.INFO)
     logging.getLogger("fastapi").setLevel(logging.INFO)
+
 
 
 def get_logger(name: str) -> logging.Logger:

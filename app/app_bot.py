@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from bot.main_bot import init_bot
 from config.logging_config import get_logger
 from bot.handlers.payment import handle_yookassa_update
-from bot.services.yookassa_service import YooKassaService, ip_in_ranges
+from bot.services.yookassa_service import YooKassaService
 from bot.services.remnawave_service import RemnawaveService
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -110,10 +110,28 @@ def create_app(settings):
             obj = update_data.get("object", {})
 
             logger.info(f"YooKassa event received: {event}, object: {obj}")
-            # Dispatch handling in background
-            asyncio.create_task(handle_yookassa_update(event, obj, remnawave_service))
+            
+            # Checking the original ip by caddy header
+            ip = request.headers.get("X-Forwarded-For")
 
+            # No X-Forwarded-For header, taking the direct ip
+            if not ip:
+                logger.info("No X-Forwarded-For header, taking the direct ip")
+                ip = request.client.host 
+                if not yookassa_service.is_ip_valid(ip=ip):
+                    raise HTTPException(status_code=401, detail="Ip is not a valid yookassa ip")
+                asyncio.create_task(handle_yookassa_update(event, obj, remnawave_service))
+                return {"ok": True}
+
+            logger.warning(f"Found X-Forwarded-For header: {ip}")
+            ip = ip.split(",")[0].strip()
+            if not yookassa_service.is_ip_valid(ip=ip):
+                    raise HTTPException(status_code=401, detail="Ip is not a valid yookassa ip")
+            asyncio.create_task(handle_yookassa_update(event, obj, remnawave_service))
             return {"ok": True}
+            
+
+            
         except Exception as e:
             logger.error(f"Error processing YooKassa webhook: {e}")
             raise HTTPException(status_code=500, detail="Internal server error")

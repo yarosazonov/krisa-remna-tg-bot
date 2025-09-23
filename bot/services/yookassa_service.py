@@ -1,38 +1,16 @@
 import uuid
-import logging
 import asyncio
 from typing import Optional, Dict, Any, List
-import ipaddress
 
+from config.logging_config import get_logger
 from yookassa import Configuration, Payment as YooKassaPayment
 from yookassa.domain.request.payment_request_builder import PaymentRequestBuilder
 from yookassa.domain.common.confirmation_type import ConfirmationType
+from yookassa.domain.common import SecurityHelper
 
 from config.settings import Settings
 
-    
-
-YOOKASSA_IP_RANGES = [
-    "185.71.76.0/27",
-    "185.71.77.0/27",
-    "77.75.153.0/25",
-    "77.75.156.11/32",
-    "77.75.156.35/32",
-    "77.75.154.128/25",
-    "2a02:5180::/32"
-]
-
-
-
-# Check yookassa ip ranges
-#
-#
-def ip_in_ranges(ip: str) -> bool:
-    for cidr in YOOKASSA_IP_RANGES:
-        if ipaddress.ip_address(ip) in ipaddress.ip_network(cidr):
-            return True
-    return False
-
+logger = get_logger(__name__)
 
 
 class YooKassaService:
@@ -47,7 +25,7 @@ class YooKassaService:
         self.settings = settings_obj
 
         if not shop_id or not secret_key:
-            logging.warning(
+            logger.warning(
                 "YooKassa SHOP_ID or SECRET_KEY not configured in settings. "
                 "Payment functionality will be DISABLED.")
             self.configured = False
@@ -55,10 +33,10 @@ class YooKassaService:
             try:
                 Configuration.configure(shop_id, secret_key)
                 self.configured = True
-                logging.info(
+                logger.info(
                     f"YooKassa SDK configured for shop_id: {shop_id[:5]}...")
             except Exception as e:
-                logging.error(f"Failed to configure YooKassa SDK: {e}",
+                logger.error(f"Failed to configure YooKassa SDK: {e}",
                               exc_info=True)
                 self.configured = False
 
@@ -66,16 +44,16 @@ class YooKassaService:
             self.return_url = configured_return_url
         elif bot_username_for_default_return:
             self.return_url = f"https://t.me/{bot_username_for_default_return}"
-            logging.info(
+            logger.info(
                 f"YOOKASSA_RETURN_URL not set, using dynamic default based on bot username: {self.return_url}"
             )
         else:
             self.return_url = "https://example.com/payment_error_no_return_url_configured"
-            logging.warning(
+            logger.warning(
                 f"CRITICAL: YOOKASSA_RETURN_URL not set AND bot username not provided. "
                 f"Using placeholder: {self.return_url}. Payments may not complete correctly."
             )
-        logging.info(
+        logger.info(
             f"YooKassa Service effective return_url for payments: {self.return_url}"
         )
 
@@ -88,11 +66,11 @@ class YooKassaService:
             receipt_email: Optional[str] = None,
             receipt_phone: Optional[str] = None) -> Optional[Dict[str, Any]]:
         if not self.configured:
-            logging.error("YooKassa is not configured. Cannot create payment.")
+            logger.error("YooKassa is not configured. Cannot create payment.")
             return None
 
         if not self.settings:
-            logging.error(
+            logger.error(
                 "YooKassaService: Settings object not available. Cannot create payment with receipt details."
             )
             return {
@@ -111,7 +89,7 @@ class YooKassaService:
             customer_contact_for_receipt[
                 "email"] = self.settings.YOOKASSA_DEFAULT_RECEIPT_EMAIL
         else:
-            logging.error(
+            logger.error(
                 "CRITICAL: No email/phone for YooKassa receipt provided and YOOKASSA_DEFAULT_RECEIPT_EMAIL is not set."
             )
             return {
@@ -162,7 +140,7 @@ class YooKassaService:
             idempotence_key = str(uuid.uuid4())
             payment_request = builder.build()
 
-            logging.info(
+            logger.info(
                 f"Creating YooKassa payment (Idempotence-Key: {idempotence_key}). "
                 f"Amount: {amount} {currency}. Metadata: {metadata}. Receipt: {receipt_data_dict}"
             )
@@ -172,7 +150,7 @@ class YooKassaService:
                 None, lambda: YooKassaPayment.create(payment_request,
                                                      idempotence_key))
 
-            logging.info(
+            logger.info(
                 f"YooKassa Payment.create response: ID={response.id}, Status={response.status}, Paid={response.paid}"
             )
 
@@ -206,18 +184,18 @@ class YooKassaService:
                 response.test if hasattr(response, 'test') else None
             }
         except Exception as e:
-            logging.error(f"YooKassa payment creation failed: {e}",
+            logger.error(f"YooKassa payment creation failed: {e}",
                           exc_info=True)
             return None
 
     async def get_payment_info(
             self, payment_id_in_yookassa: str) -> Optional[Dict[str, Any]]:
         if not self.configured:
-            logging.error(
+            logger.error(
                 "YooKassa is not configured. Cannot get payment info.")
             return None
         try:
-            logging.info(
+            logger.info(
                 f"Fetching payment info from YooKassa for ID: {payment_id_in_yookassa}"
             )
 
@@ -226,7 +204,7 @@ class YooKassaService:
                 None, lambda: YooKassaPayment.find_one(payment_id_in_yookassa))
 
             if payment_info_yk:
-                logging.info(
+                logger.info(
                     f"YooKassa payment info for {payment_id_in_yookassa}: Status={payment_info_yk.status}, Paid={payment_info_yk.paid}"
                 )
                 return {
@@ -265,14 +243,21 @@ class YooKassaService:
                     if hasattr(payment_info_yk, 'test') else None
                 }
             else:
-                logging.warning(
+                logger.warning(
                     f"No payment info found in YooKassa for ID: {payment_id_in_yookassa}"
                 )
                 return None
         except Exception as e:
-            logging.error(
+            logger.error(
                 f"YooKassa get payment info for {payment_id_in_yookassa} failed: {e}",
                 exc_info=True)
             return None
 
 
+    def is_ip_valid(self, ip):
+    # Is ip in yookassa's ranges?
+        if not SecurityHelper().is_ip_trusted(ip):
+            logger.warning(f"Yookassa webhook request ip didn't pass the check, ip:{ip}")
+            return False
+        logger.info(f"Yookassa webhook request passed the ip check, ip: {ip}")
+        return True

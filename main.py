@@ -6,9 +6,10 @@ from config.logging_config import setup_logging
 from app.app_bot import create_app
 from db.db_setup import init_db
 
-setup_logging()
+
 
 settings = get_settings()
+setup_logging(settings.LOGGING_LVL)
 fastapi_app = create_app(settings)
 
 if __name__ == '__main__':

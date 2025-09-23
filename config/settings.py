@@ -8,6 +8,7 @@ logger = get_logger(__name__)
 
 
 class Settings(BaseSettings):
+    LOGGING_LVL: str
     # Bot specific
     BOT_TOKEN: str
     ADMIN_ID: int
