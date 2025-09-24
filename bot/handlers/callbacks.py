@@ -126,11 +126,7 @@ async def trial_used_callback(callback: types.CallbackQuery, telegram_id: int, r
 
     # Use module-level service instance
 
-    _ = await remnawave_service.grant_trial(
-        tg_id=telegram_id, tg_tag=user_tag,
-        trial_days=settings.TRIAL_DAYS,
-        trial_traffic=settings.TRIAL_TRAFFIC_GB,
-        internal_squads=settings.SQUADS)
+    _ = await remnawave_service.grant_trial(tg_id=telegram_id, tg_tag=user_tag)
 
     await revoke_trial(telegram_id)
     # Creating a custom keyboard on the fly

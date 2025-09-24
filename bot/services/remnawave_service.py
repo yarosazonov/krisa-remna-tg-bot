@@ -6,10 +6,14 @@ from typing import Optional, Dict, Any
 from config.logging_config import get_logger
 from datetime import datetime, timedelta, timezone
 
+from config.settings import get_settings
+from helpers.helpers import bytes_to_gb, gb_to_bytes
 from db.db_setup import add_user, revoke_trial
 
 logger = get_logger(__name__)
 
+# Timeout for httpx requests
+TIMEOUT_SECONDS = 10.0
 
 class RemnawaveService:
     def __init__(self, api_url: str, api_token: str):
@@ -25,7 +29,7 @@ class RemnawaveService:
                 url = f"{self.api_url}/api/users/by-telegram-id/{tg_id}"
                 logger.info(f"Fetching user data for tg_id: {tg_id}")
 
-                response = await client.get(url, headers=self.headers, timeout=10.0)
+                response = await client.get(url, headers=self.headers, timeout=TIMEOUT_SECONDS)
 
                 if response.status_code == 200:
                     # Parsing the response body as JSON and return the result as a native Python object
@@ -86,9 +90,9 @@ class RemnawaveService:
                 traffic_limit = user_data['trafficLimitBytes']
                 if traffic_limit and traffic_limit > 0:
                     # Convert bytes to GB
-                    traffic_limit_gb = traffic_limit / (1024**3)
+                    traffic_limit_gb = bytes_to_gb(traffic_limit)
                     used_traffic = user_data.get('usedTrafficBytes', 0)
-                    used_traffic_gb = used_traffic / (1024**3)
+                    used_traffic_gb = bytes_to_gb(used_traffic)
                     status_text += f"\nРасход трафика: <b>{used_traffic_gb:.2f}</b> из <b>{traffic_limit_gb:.2f}</b> ГБ\n"
                 else:
                     status_text += f"Лимит трафика: <b>Безлимитный</b>\n"
@@ -130,7 +134,7 @@ class RemnawaveService:
 
                 expire_at = (datetime.now(timezone.utc) + timedelta(days=subscription_days)).isoformat().replace("+00:00", "Z")
                 username = f"{tg_tag}_{tg_id}"
-                trafficLimitBytes = traffic * 1024**3
+                trafficLimitBytes = gb_to_bytes(traffic)
                 squads = [s.strip() for s in internal_squads.split(",") if s.strip()]
 
                 payload = {
@@ -145,7 +149,7 @@ class RemnawaveService:
 
                 logger.info(f"Creating a new user with id: {tg_id}")
 
-                response = await client.post(url, headers=self.headers, json=payload, timeout=10.0)
+                response = await client.post(url, headers=self.headers, json=payload, timeout=TIMEOUT_SECONDS)
 
                 if response.status_code == 201:
                     data = response.json()
@@ -206,33 +210,32 @@ class RemnawaveService:
             async with httpx.AsyncClient() as client:
                 url = f"{self.api_url}/api/users/"
 
-                payload: Dict[str, Any] = {"uuid": uuid}
+                # Building the payload using dict comprehension
+                payload: Dict[str, Any] = {
+                    k: v
+                    for k, v in {
+                        "uuid": uuid,
+                        "activeInternalSquads": activeInternalSquads,
+                        "description": description,
+                        "email": email,
+                        "expireAt": expireAt,
+                        "hwidDeviceLimit": hwidDeviceLimit,
+                        "status": status,
+                        "tag": tag,
+                        "telegramId": telegramId,
+                        "trafficLimitBytes": trafficLimitBytes,
+                        "trafficLimitStrategy": trafficLimitStrategy
+                    }.items()
+                    if v is not None
+                }
 
-                if activeInternalSquads is not None:
-                    payload["activeInternalSquads"] = activeInternalSquads
-                if description is not None:
-                    payload["description"] = description
-                if email is not None:
-                    payload["email"] = email
-                if expireAt is not None:
-                    # API requires ISO8601 format with Z
-                    payload["expireAt"] = expireAt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
-                if hwidDeviceLimit is not None:
-                    payload["hwidDeviceLimit"] = hwidDeviceLimit
-                if status is not None:
-                    payload["status"] = status
-                if tag is not None:
-                    payload["tag"] = tag
-                if telegramId is not None:
-                    payload["telegramId"] = telegramId
-                if trafficLimitBytes is not None:
-                    payload["trafficLimitBytes"] = trafficLimitBytes
-                if trafficLimitStrategy is not None:
-                    payload["trafficLimitStrategy"] = trafficLimitStrategy
+                # API requires ISO8601 format with Z
+                if "expireAt" in payload:
+                    payload["expireAt"] = payload["expireAt"].astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
                 logger.info(f"Updating user {uuid} with payload: {payload}")
 
-                response = await client.patch(url, headers=self.headers, json=payload, timeout=10.0)
+                response = await client.patch(url, headers=self.headers, json=payload, timeout=TIMEOUT_SECONDS)
 
                 if response.status_code == 200:
                     data = response.json()
@@ -286,7 +289,7 @@ class RemnawaveService:
                         url,
                         headers=self.headers,
                         params={"size": size, "start": start},
-                        timeout=10.0
+                        timeout=TIMEOUT_SECONDS
                     )
 
                     if response.status_code != 200:
@@ -348,7 +351,7 @@ class RemnawaveService:
     # Grants a user a trial
     #
     #
-    async def grant_trial(self, tg_id: int, tg_tag: str, trial_days: int, trial_traffic: int, internal_squads: str):
+    async def grant_trial(self, tg_id: int, tg_tag: str):
         """
         Creates a new trial user associated with a Telegram ID
         Args:
@@ -361,8 +364,16 @@ class RemnawaveService:
         Returns:
             dict | None: JSON response from the API or None if failed
         """
+        settings = get_settings()
         try:
-            return await self._create_user(tg_id=tg_id, tg_tag=tg_tag, subscription_days=trial_days, traffic=trial_traffic, internal_squads=internal_squads)
+            return await self._create_user(
+                tg_id=tg_id, 
+                tg_tag=tg_tag, 
+                subscription_days=settings.TRIAL_DAYS, 
+                traffic=settings.TRIAL_TRAFFIC_GB, 
+                internal_squads=settings.SQUADS
+                )
+        
         except Exception as e:
             logger.error(f"Unexpected error while creating trial user for tg_id: {tg_id}: {e}")
             return None
@@ -437,14 +448,13 @@ class RemnawaveService:
                 new_expire_at = now_utc + timedelta(days=subscription_days)
 
             # Convert traffic GB → bytes
-            traffic_limit_bytes = traffic * 1024**3
+            traffic_limit_bytes = gb_to_bytes(traffic)
 
             return await self._update_user(
                 uuid=uuid,
                 expireAt=new_expire_at,
                 trafficLimitBytes=traffic_limit_bytes,
                 telegramId=tg_id,
-                tag=tg_tag[:16].upper(),  # ensure max 16 chars, uppercase
                 status="ACTIVE",
                 activeInternalSquads=[s.strip() for s in internal_squads.split(",") if s.strip()]
             )

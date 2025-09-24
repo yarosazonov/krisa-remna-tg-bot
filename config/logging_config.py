@@ -3,6 +3,10 @@ from logging.handlers import RotatingFileHandler
 import sys
 from pathlib import Path
 
+from helpers.helpers import mb_to_bytes
+
+LOG_FILE_SIZE_MB = 5
+
 def setup_logging(level: str = "INFO") -> None:
     """Configure logging for the application."""
 
@@ -20,7 +24,7 @@ def setup_logging(level: str = "INFO") -> None:
             # logging.StreamHandler(sys.stdout),
             RotatingFileHandler(
                 log_file, 
-                maxBytes=5*1024*1024,  # 5 MB
+                maxBytes=mb_to_bytes(LOG_FILE_SIZE_MB),  # 5 MB
                 backupCount=5,          # Keep 5 backup files
                 encoding="utf-8"
             )
