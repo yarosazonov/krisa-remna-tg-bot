@@ -37,7 +37,7 @@ class User(Base):
     referrer_id = Column(Integer, ForeignKey("users.telegram_id"), nullable=True)
     balance = Column(Integer, default=0)
     ref_cashback_percentage = Column(Integer, default=10)
-    telegram_username = Column(String, index=True)
+    telegram_username = Column(String)
 
     # Self-referencing relationship
     referrer = relationship(

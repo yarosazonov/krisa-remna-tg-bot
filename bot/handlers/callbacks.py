@@ -488,7 +488,7 @@ async def check_referees_callback(callback: types.CallbackQuery, telegram_id: in
     if referees_dict:
         # Format each referee as "Tag: @username, Id: tid" on a new line
         referees_text = "\n".join(
-            f"Tag: @{uname}; Id: <code>{tid}</code>" if uname else f"Id: <code>{tid}</code>"
+            f"Tag: @{uname}; Id: <code>{tid}</code>" if uname else f"Tag: @None; Id: <code>{tid}</code>"
             for tid, uname in referees_dict.items()
         )
     else:
