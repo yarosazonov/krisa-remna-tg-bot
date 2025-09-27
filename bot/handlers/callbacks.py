@@ -1,15 +1,19 @@
-from aiogram import types, Router, F
+from aiogram import types, Router, F, Bot
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.deep_linking import create_start_link
 from config.logging_config import get_logger
 from config.settings import get_settings
 
-from db.db_setup import revoke_trial, get_user
+from db.db_setup import revoke_trial, get_user, get_referees, update_user
 from bot.keyboards.user_keyboards import get_main_menu_keyboard, get_sub_keyboard, get_buy_keyboard, get_trial_keyboard
 from bot.middlewares.id_check_middleware import UserIDMiddleware
 from bot.services.remnawave_service import RemnawaveService
 from bot.services.yookassa_service import YooKassaService
+from bot.handlers.commands import WELCOME_TEXT
+from helpers.helpers import get_subscription_map, months_to_days
 
 logger = get_logger(__name__)
+settings = get_settings()
 router = Router()
 # Register the middlewares
 router.callback_query.middleware(UserIDMiddleware())
@@ -24,19 +28,15 @@ async def main_menu_callback(callback: types.CallbackQuery, telegram_id: int):
     try:
         logger.info(f"User {telegram_id} started the bot")
 
-        welcome_text = (
-            "👋 Добро пожаловать в <b>KrisaVPN</b> bot!"
-        )
-
         user = await get_user(telegram_id=telegram_id)
         keyboard = get_main_menu_keyboard(user.eligible_for_trial)
-        await callback.message.edit_text(welcome_text, reply_markup=keyboard, parse_mode='HTML')
+        await callback.message.edit_text(WELCOME_TEXT, reply_markup=keyboard, parse_mode='HTML')
 
     except Exception as e:
         logger.error(f"Error handling /start command from user {telegram_id}: {e}")
         await callback.message.edit_text("Извините, что-то пошло не так.")
 
-
+    await callback.answer()
 
 # Sub menu callback
 #
@@ -46,8 +46,9 @@ async def sub_callback(callback: types.CallbackQuery, telegram_id: int, remnawav
     """Handle /status command to check subscription status."""
     try:
         logger.info(f"User {telegram_id} requested subscription status")
-
-        await callback.message.edit_text("🔍 Проверяю статус вашей подписки...")
+        
+        await callback.answer(text="🔍 Проверяю статус вашей подписки...", show_alert=False)
+        # await callback.message.edit_text("🔍 Проверяю статус вашей подписки...")
 
         # Use module-level service instance
 
@@ -56,7 +57,7 @@ async def sub_callback(callback: types.CallbackQuery, telegram_id: int, remnawav
 
         if user_data is None:
             await callback.message.edit_text(
-                "❌ <b>Подписка не найдена</b> ❌\n\n"
+                "⛔ <b>Подписка не найдена</b>\n\n"
                 "Активная подписка для вашего Telegram аккаунта не найдена.\n"
                 "Обратитесь в поддержку, если считаете, что это ошибка.",
                 parse_mode="HTML",
@@ -80,14 +81,17 @@ async def sub_callback(callback: types.CallbackQuery, telegram_id: int, remnawav
 
 
 
+
+# ============
 # Buy callback
-#
-#
+# ============
 @router.callback_query(F.data == "buy_menu")
 async def buy_callback(callback: types.CallbackQuery):
-    settings = get_settings()
     await callback.message.edit_text(
-        "Выберите срок продления подписки:",
+        "Оплачивая подписку, вы получаете:\n\n"
+        "🌍 Доступ ко всем серверам\n"
+        "📦 250 ГБ трафика ежемесячно\n\n"
+        "💳 Выберите срок продления подписки:",
         parse_mode="HTML",
         reply_markup=get_buy_keyboard(
             enable_1_month=settings.ENABLE_1_MONTH, 
@@ -101,9 +105,30 @@ async def buy_callback(callback: types.CallbackQuery):
 
 
 
+# ================
+# Traffic question
+# ================
+@router.callback_query(F.data == "traffic_question")
+async def traffic_question_callback(callback: types.CallbackQuery):
+    keyboard = [
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="buy_menu")]
+    ]
+
+    await callback.message.edit_text(
+        "📡 <b>Почему есть ограничение по трафику?</b>\n\n"
+        "🛡️ Ограничение помогает защищать сеть от злоумышленников и "
+        "поддерживать стабильную высокую скорость для всех пользователей.\n\n"
+        "📊 Практика показывает, что при активном использовании интернета "
+        "с нескольких устройств, расход трафика редко превышает "
+        "<b>100 ГБ в месяц</b>. Поэтому 250 ГБ - это лимит с большим запасом",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard)
+    )
+    await callback.answer()
+
+# ===============
 # Trial callbacks
-#
-#
+# ===============
 @router.callback_query(F.data == "trial_menu")
 async def trial_callback(callback: types.CallbackQuery, telegram_id: int):
     user = await get_user(telegram_id)
@@ -117,12 +142,7 @@ async def trial_callback(callback: types.CallbackQuery, telegram_id: int):
 
 @router.callback_query(F.data == "trial_menu_used")
 async def trial_used_callback(callback: types.CallbackQuery, telegram_id: int, remnawave_service: RemnawaveService):
-    if callback.from_user.username:
-        user_tag = callback.from_user.username
-    else:
-        user_tag = 'tg'
-
-    settings = get_settings()
+    user_tag = callback.from_user.username or "tg"
 
     # Use module-level service instance
 
@@ -143,54 +163,130 @@ async def trial_used_callback(callback: types.CallbackQuery, telegram_id: int, r
 
 
 
+# ========================
 # Payment callbacks
-#
-#
-@router.callback_query(F.data.startswith("pay_"))
-async def payment_callback(callback: types.CallbackQuery, telegram_id: int, yookassa_service: YooKassaService):
+# ========================
+# Step 1: Prepare payment
+# ========================
+@router.callback_query(F.data.startswith("prepare_"))
+async def payment_prep_callback(callback: types.CallbackQuery, telegram_id: int, yookassa_service: YooKassaService):
     try:
-        settings = get_settings()
-
         # Parse subscription period from callback data
-        subscription_period = callback.data.replace("pay_", "")
+        subscription_period = callback.data.replace("prepare_", "")
 
-        # Map subscription periods to prices and descriptions
-        subscription_map = {
-            "1_month": {
-                "months": 1,
-                "price": settings.RUB_PRICE_1_MONTH,
-                "description": "Подписка на 1 месяц"
-            },
-            "3_months": {
-                "months": 3,
-                "price": settings.RUB_PRICE_3_MONTHS,
-                "description": "Подписка на 3 месяца"
-            },
-            "6_months": {
-                "months": 6,
-                "price": settings.RUB_PRICE_6_MONTHS,
-                "description": "Подписка на 6 месяцев"
-            }
-        }
+        subscription_map = get_subscription_map(settings)
+
+        if subscription_period not in subscription_map:
+            await callback.message.edit_text("❌ Неверный период подписки")
+            return
+        
+        keys = [
+            [InlineKeyboardButton(text="✅ Оплатить полную сумму", callback_data=f"pay_{subscription_period}_full")]
+        ]
+
+        sub_info = subscription_map[subscription_period]
+        user = await get_user(telegram_id=telegram_id)
+        balance = user.balance 
+
+        # Finish building the keyboard
+        if balance > 0:
+            keys.append([InlineKeyboardButton(text="💱 Списать средства с баланса", callback_data=f"pay_{subscription_period}_part")])
+        keys.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="buy_menu")])
+
+        await callback.message.edit_text(
+            f"📋 <b>Детали заказа:</b>\n\n"
+            f"• {sub_info['description']}\n"
+            f"• Сумма: <b>{sub_info['price']} RUB</b>\n"
+            f"• Текущий баланс: <b>{balance} RUB</b>\n",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=keys)
+        )
+
+    except Exception as e:
+        logger.error(f"Error creating order for {telegram_id}: {e}")
+        await callback.message.edit_text(
+            "❌ Произошла ошибка при подготовке платежа\n\n"
+            "Попробуйте позже или обратитесь в поддержку."
+        )
+    await callback.answer()
+
+# ======================
+# Step 2: Create payment
+# ======================
+@router.callback_query(F.data.startswith("pay_"))
+async def payment_callback(
+    callback: types.CallbackQuery, 
+    telegram_id: int, 
+    remnawave_service: RemnawaveService, 
+    yookassa_service: YooKassaService
+    ):
+    try:
+        user_tag = callback.from_user.username or "tg"
+        subscription_map = get_subscription_map(settings)
+
+        # Parse callback: pay_1_month_full → ["pay", "1_month", "full"]
+        parts = callback.data.split("_")
+        if len(parts) < 3:
+            await callback.message.edit_text("❌ Неверный формат данных оплаты")
+            return
+
+        subscription_period = "_".join(parts[1:-1])  # e.g. "1_month"
+        method = parts[-1]                           # "full" or "part"
 
         if subscription_period not in subscription_map:
             await callback.message.edit_text("❌ Неверный период подписки")
             return
 
         sub_info = subscription_map[subscription_period]
+        user = await get_user(telegram_id=telegram_id)
+        balance = user.balance
+        price = sub_info["price"]
 
-        await callback.message.edit_text("⏳ Создаю платеж...")
-        user_tag = callback.from_user.username
+         # Handle full vs partial payment
+        if method == "part":
+            if balance >= price:
+                # User can cover fully with balance
+                keys = [
+                    [InlineKeyboardButton(text="🏡 Главное меню", callback_data="main_menu")]
+                ]
+                await remnawave_service.handle_payment(
+                    tg_id=telegram_id, 
+                    tg_tag=user_tag, 
+                    subscription_days=months_to_days(sub_info["months"])
+                    )
+                user_db = await update_user(telegram_id=telegram_id, balance_increment=-price)
+                await callback.message.edit_text(
+                    f"✅ {sub_info['description']} успешно оплачена!\n\n"
+                    f"Новый баланс: <b>{user_db.balance} RUB</b>",
+                    parse_mode="HTML",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=keys)
+                )
+                return
+            else:
+                # Deduct balance, pay the rest
+                amount_to_charge = price - balance 
+                reset_balance = True
+        else:
+            # Full payment
+            reset_balance = False
+            amount_to_charge = price
+
+
+        await callback.answer(text="⏳ Создаю платеж...", show_alert=False)
+        # await callback.message.edit_text("⏳ Создаю платеж...")
+
         # Create payment metadata
         metadata = {
             "telegram_id": str(telegram_id),
             "user_tag": str(user_tag),
-            "subscription_months": str(sub_info["months"])
+            "subscription_months": str(sub_info["months"]),
+            "payment_method": method,
+            "reset_balance": reset_balance
         }
 
-        # Create payment
+        # Create YooKassa  payment
         payment_result = await yookassa_service.create_payment(
-            amount=float(sub_info["price"]),
+            amount=float(amount_to_charge),
             currency="RUB",
             description=sub_info["description"],
             metadata=metadata
@@ -228,8 +324,7 @@ async def payment_callback(callback: types.CallbackQuery, telegram_id: int, yook
             )
             return
 
-        # Create payment keyboard
-        #from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        # Payment keyboard
         payment_keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="💳 Оплатить", url=confirmation_url)],
             [InlineKeyboardButton(text="🔍 Проверить оплату", callback_data=f"check_payment_{payment_result['id']}")],
@@ -237,10 +332,9 @@ async def payment_callback(callback: types.CallbackQuery, telegram_id: int, yook
         ])
 
         await callback.message.edit_text(
-            f"💳 <b>Платеж создан</b>\n\n"
-            f"📋 <b>Детали заказа:</b>\n"
-            f"• Подписка: {sub_info['description']}\n"
-            f"• Сумма: {sub_info['price']} RUB\n"
+            f"💳 <b>Платеж создан:</b>\n\n"
+            f"• {sub_info['description']}\n"
+            f"• Сумма к оплате: <b>{amount_to_charge} RUB</b>\n"
             f"• ID платежа: <code>{payment_result['id']}</code>\n\n"
             f"Нажмите кнопку ниже для оплаты:",
             parse_mode="HTML",
@@ -253,9 +347,14 @@ async def payment_callback(callback: types.CallbackQuery, telegram_id: int, yook
             "❌ Произошла ошибка при создании платежа\n\n"
             "Попробуйте позже или обратитесь в поддержку."
         )
+        
     await callback.answer()
 
 
+
+# =============
+# Check payment
+# =============
 @router.callback_query(F.data.startswith("check_payment_"))
 async def check_payment_callback(callback: types.CallbackQuery, telegram_id: int, yookassa_service: YooKassaService):
     try:
@@ -343,4 +442,113 @@ async def check_payment_callback(callback: types.CallbackQuery, telegram_id: int
             "❌ Произошла ошибка при проверке платежа\n\n"
             "Попробуйте позже или обратитесь в поддержку."
         )
+    await callback.answer()
+
+
+
+# ================
+# Bonuses callback
+# ================
+@router.callback_query(F.data == "bonus_menu")
+async def bonus_menu_callback(callback: types.CallbackQuery, telegram_id: int, bot: Bot):
+
+    # Generate referral link
+    referral_link = await create_start_link(bot, telegram_id)
+
+    keys = [
+        [InlineKeyboardButton(text="🤝 Мои рефералы", callback_data="check_referees")],
+        [InlineKeyboardButton(text="📑 Правила вывода", callback_data="withdrawal_rules")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="main_menu")]
+    ]
+
+    await callback.message.edit_text(
+        "🤝 <b>Приглашайте друзей и получайте бонусы!</b>\n\n"
+        "💰 Вы получаете <b>10% от их покупок</b> на свой баланс.\n"
+        "📌 Бонусы можно потратить на <b>оплату подписки</b> или <b>вывести</b>.\n\n"
+        "🔗 <b>Как пригласить?</b>\n"
+        "Поделитесь с человеком вашей <b>реферальной ссылкой</b>.\n"
+        "Если он впервые запустит бот — "
+        "он станет вашим рефералом!\n\n"
+        f"👉 <b>Реферальная ссылка:</b>\n<code>{referral_link}</code>",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=keys)
+    )
+
+    await callback.answer()
+
+
+
+# =======================
+# Check referees callback
+# =======================
+@router.callback_query(F.data == "check_referees")
+async def check_referees_callback(callback: types.CallbackQuery, telegram_id: int):
+    referees_dict = await get_referees(telegram_id)
+
+    if referees_dict:
+        # Format each referee as "Tag: @username, Id: tid" on a new line
+        referees_text = "\n".join(
+            f"Tag: @{uname}; Id: <code>{tid}</code>" if uname else f"Id: <code>{tid}</code>"
+            for tid, uname in referees_dict.items()
+        )
+    else:
+        referees_text = "У вас пока нет рефералов"
+    
+    keys = [
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="bonus_menu")]
+    ]
+
+    await callback.message.edit_text(
+        f"🧍‍♂️ Ваши рефералы:\n{referees_text}",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=keys)
+    )
+    await callback.answer()
+
+
+# =========================
+# Withdrawal rules callback
+# =========================
+@router.callback_query(F.data == "withdrawal_rules")
+async def withdrawal_rules_callback(callback: types.CallbackQuery):
+    keys = [
+            [InlineKeyboardButton(text="💰 Баланс", callback_data="balance_menu")],
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="bonus_menu")]
+        ]
+
+    text = (
+        "💵 <b>Вывод средств</b>\n\n"
+        "Вы можете запросить вывод средств, если ваш баланс ≥ <b>50₽</b>.\n"
+        "Перевод будет выполнен не позднее полуночи следующего дня."
+    )
+
+
+    await callback.message.edit_text(
+        text=text,
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=keys)
+    )
+    await callback.answer()
+
+
+# ================
+# Balance callback
+# ================
+@router.callback_query(F.data == "balance_menu")
+async def check_referees_callback(callback: types.CallbackQuery, telegram_id: int):
+    keys = [
+        [InlineKeyboardButton(text="💬 Запросить вывод", url="https://t.me/yarosazonov")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="main_menu")]
+    ]
+    try:
+        user = await get_user(telegram_id=telegram_id)
+        balance = user.balance 
+        await callback.message.edit_text(
+            f"💵 Ваш баланс: {balance} RUB",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=keys)
+        )
+
+    except Exception as e:
+        logger.error(f"Error retrieving balance for user {telegram_id}: {e}")
     await callback.answer()

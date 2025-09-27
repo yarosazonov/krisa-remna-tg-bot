@@ -11,6 +11,7 @@ from helpers.helpers import bytes_to_gb, gb_to_bytes
 from db.db_setup import add_user, revoke_trial
 
 logger = get_logger(__name__)
+settings = get_settings()
 
 # Timeout for httpx requests
 TIMEOUT_SECONDS = 10.0
@@ -364,7 +365,6 @@ class RemnawaveService:
         Returns:
             dict | None: JSON response from the API or None if failed
         """
-        settings = get_settings()
         try:
             return await self._create_user(
                 tg_id=tg_id, 
@@ -387,9 +387,7 @@ class RemnawaveService:
         self,
         tg_id: int,
         tg_tag: str,
-        subscription_days: int,
-        traffic: int,
-        internal_squads: str
+        subscription_days: int
     ) -> Optional[Dict[str, Any]]:
         """
         Handles user subscription payment.
@@ -417,8 +415,8 @@ class RemnawaveService:
                     tg_id=tg_id,
                     tg_tag=tg_tag,
                     subscription_days=subscription_days,
-                    traffic=traffic,
-                    internal_squads=internal_squads
+                    traffic=settings.MONTHLY_TRAFFIC_GB,
+                    internal_squads=settings.SQUADS
                 )
 
             # Step 3: If found → extend subscription
@@ -447,16 +445,10 @@ class RemnawaveService:
             else:
                 new_expire_at = now_utc + timedelta(days=subscription_days)
 
-            # Convert traffic GB → bytes
-            traffic_limit_bytes = gb_to_bytes(traffic)
-
             return await self._update_user(
                 uuid=uuid,
                 expireAt=new_expire_at,
-                trafficLimitBytes=traffic_limit_bytes,
-                telegramId=tg_id,
-                status="ACTIVE",
-                activeInternalSquads=[s.strip() for s in internal_squads.split(",") if s.strip()]
+                status="ACTIVE"
             )
 
         except Exception as e:

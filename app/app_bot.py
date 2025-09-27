@@ -3,12 +3,13 @@ import json
 from fastapi import FastAPI, Request, HTTPException, Header
 from aiogram import types
 from contextlib import asynccontextmanager
+
 from bot.main_bot import init_bot
 from config.logging_config import get_logger
 from bot.handlers.payment import handle_yookassa_update
 from bot.services.yookassa_service import YooKassaService
 from bot.services.remnawave_service import RemnawaveService
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from bot.services.notification_service import remnawave_webhook_notification
 
 logger = get_logger(__name__)
 
@@ -103,6 +104,7 @@ def create_app(settings):
     @app.post(settings.YOOKASSA_WEBHOOK_PATH)
     async def yookassa_webhook(request: Request):
         """Handle incoming yookassa payment updates"""
+        nonlocal bot
         try:
             logger.debug("Received Yookassa webhook request")
             update_data = await request.json()
@@ -120,14 +122,28 @@ def create_app(settings):
                 ip = request.client.host 
                 if not yookassa_service.is_ip_valid(ip=ip):
                     raise HTTPException(status_code=401, detail="Ip is not a valid yookassa ip")
-                asyncio.create_task(handle_yookassa_update(event, obj, remnawave_service))
+                
+                # Yookassa payment update handler
+                asyncio.create_task(handle_yookassa_update(
+                    event=event, 
+                    obj=obj, 
+                    remnawave_service=remnawave_service,
+                    bot=bot
+                    ))
                 return {"ok": True}
 
             logger.warning(f"Found X-Forwarded-For header: {ip}")
             ip = ip.split(",")[0].strip()
             if not yookassa_service.is_ip_valid(ip=ip):
                     raise HTTPException(status_code=401, detail="Ip is not a valid yookassa ip")
-            asyncio.create_task(handle_yookassa_update(event, obj, remnawave_service))
+            
+            # Yookassa payment update handler
+            asyncio.create_task(handle_yookassa_update(
+                event=event, 
+                obj=obj, 
+                remnawave_service=remnawave_service, 
+                bot=bot
+                ))
             return {"ok": True}
             
 
@@ -143,6 +159,7 @@ def create_app(settings):
     #
     @app.post(settings.REMNAWAVE_WEBHOOK_PATH)
     async def remnawave_webhook(request: Request):
+        nonlocal bot
         body = await request.body()
         signature = request.headers.get("X-Remnawave-Signature")
         
@@ -161,29 +178,7 @@ def create_app(settings):
             logger.warning(f"No Telegram ID for user {user.get('uuid')}, skipping message.")
             return {"status": "ok"}
 
-        # Message construction based on the event
-        message_text = None
-        
-        # Message keyboard
-        keyboard_buttons = []
-        keyboard_buttons.append([InlineKeyboardButton(text="💬 Написать в поддержку", url="https://t.me/yarosazonov")])
-        if event in ("user.expires_in_24_hours", "user.expired"):
-            keyboard_buttons.insert(0, [InlineKeyboardButton(text="🔥 Продлить подписку", callback_data="buy_menu")])
-        keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
-        
-        # Message text
-        if event == "user.expires_in_24_hours":
-            message_text = ("✋ Добрый день, ровно через 24 часа ваша подписка истекает, не забудьте продлить!🤝")
-        elif event == "user.expired":
-            message_text = ("🔔 Здравствуйте, ваша подписка только что истекла!\n"
-            "Надеюсь что вы довольны сервисом и останетесь с нами.\n"
-            "Если у вас есть замечания, пожалуйста, напишите в поддержку.\nХорошего дня!🎈"
-            )
-        elif event == "user.limited":
-            message_text = ("🔔 Добрый день! У вас кончился траффик.🤯\nЕсли вы хотите приобрести дополнительный пакет - обратитесь в поддержку🤝")
-
-        # Sending the message
-        await bot.send_message(chat_id=int(telegram_id), text=message_text, reply_markup=keyboard)
+        asyncio.create_task(remnawave_webhook_notification(bot=bot, telegram_id=telegram_id, event=event))
         return {"status": "ok"}
 
 

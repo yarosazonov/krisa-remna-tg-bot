@@ -1,10 +1,11 @@
 from pathlib import Path
-from sqlalchemy import Column, Integer, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, Boolean, ForeignKey, String
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship, selectinload
 from sqlalchemy.future import select
 from sqlalchemy import update
-import aiosqlite
+from typing import Any, List, Dict
+import aiosqlite # do not delete, is needed for DATABASE_URL creation and for pipreqs to add it into requirements.txt
 
 from config.logging_config import get_logger
 
@@ -30,16 +31,21 @@ class User(Base):
     # Each instance of the class "User" is a row in a "users" databas
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)  # auto-increment internal id
-    telegram_id = Column(Integer, unique=True, index=True, nullable=False)
+    id = Column(Integer, primary_key=True)  # auto-increment internal id
+    telegram_id = Column(Integer, unique=True, nullable=False)
     eligible_for_trial = Column(Boolean, default=True)
     referrer_id = Column(Integer, ForeignKey("users.telegram_id"), nullable=True)
+    balance = Column(Integer, default=0)
+    ref_cashback_percentage = Column(Integer, default=10)
+    telegram_username = Column(String, index=True)
 
     # Self-referencing relationship
     referrer = relationship(
         "User",
+        # when calling the referrer attribute remote_side defines parent/child relationship between referrer_id and telegram_id. Remote side is parent.
         remote_side=[telegram_id],
-        backref="referees"  # This creates the reverse relation
+        # This creates the reverse relation, retrieves the list of Users whose referrer_id is equal to this user’s telegram_id    
+        backref="referees"  
     )
 
 async def init_db():
@@ -56,7 +62,9 @@ async def init_db():
 
 
 # Adding a user to the db
-async def add_user(telegram_id: int, referrer_id: int | None = None):
+#
+#
+async def add_user(telegram_id: int, referrer_id: int | None = None, telegram_username: str | None = None):
     async with async_session() as session:
         async with session.begin():
             logger.info(f'Trying to add user with telegram_id={telegram_id}')
@@ -71,7 +79,8 @@ async def add_user(telegram_id: int, referrer_id: int | None = None):
 
             user = User(
                 telegram_id=telegram_id,
-                referrer_id=referrer_id
+                referrer_id=referrer_id,
+                telegram_username=telegram_username
             )
             session.add(user)
             logger.info(f'User with telegram_id={telegram_id} added to session.')
@@ -82,7 +91,9 @@ async def add_user(telegram_id: int, referrer_id: int | None = None):
 
 
 # Getting a user
-async def get_user(telegram_id: int):
+#
+#
+async def get_user(telegram_id: int) -> User: 
     async with async_session() as session:
         logger.info(f'Fetching user with telegram_id={telegram_id}')
         result = await session.execute(select(User).where(User.telegram_id == telegram_id))
@@ -94,7 +105,65 @@ async def get_user(telegram_id: int):
         return user
 
 
+
+# Updating a user
+#
+#
+async def update_user(
+    telegram_id: int,
+    eligible_for_trial: bool | None = None,
+    referrer_id: int | None = None,
+    balance_increment: int | None = None,
+    ref_cashback_percentage: int | None = None,
+    telegram_username: str | None = None
+) -> User:
+    """
+    Update fields of a user identified by telegram_id.
+    Example:
+        await update_user(
+            12345,
+            balance=100,
+            eligible_for_trial=False,
+            telegram_username="hero123"
+        )
+    """
+    async with async_session() as session:
+        async with session.begin():
+            values_to_update: Dict[str, Any] = {
+                k: v
+                for k, v in {
+                    "eligible_for_trial": eligible_for_trial,
+                    "referrer_id": referrer_id,
+                    "ref_cashback_percentage": ref_cashback_percentage,
+                    "telegram_username": telegram_username
+                }.items() 
+                if v is not None
+            }
+
+            if not values_to_update and balance_increment is None:
+                logger.warning(f"No fields provided to update for user {telegram_id}")
+                return None
+
+            if balance_increment is not None:
+                values_to_update["balance"] = User.balance + balance_increment
+
+            stmt = update(User).where(User.telegram_id == telegram_id).values(**values_to_update)
+            
+            logger.info(f"Updating user {telegram_id} with values: {values_to_update} and balance_increment: {balance_increment}")
+            await session.execute(stmt)
+            stmt = select(User).where(User.telegram_id == telegram_id)
+            updated_user = await session.scalar(stmt)
+
+        logger.info(f"User {telegram_id} updated successfully.")
+
+        return updated_user
+
+
+
+
 # Revoking a trial
+#
+#
 async def revoke_trial(telegram_id: int):
     """
     Revoke the trial eligibility of a specific user.
@@ -111,3 +180,34 @@ async def revoke_trial(telegram_id: int):
             )
         await session.commit()
         logger.info(f'Trial revoked for user with telegram_id={telegram_id}')
+
+
+
+# Getting all referees
+#
+#
+async def get_referees(telegram_id: int) -> List:
+    """
+    Outputs a list of users referred by the user with the given telegram_id,
+    using the backref relationship.
+    """
+    async with async_session() as session:
+        async with session.begin():
+            logger.warning(f'Looking for the referred users for telegram_id: {telegram_id}')
+            result = await session.execute(
+                select(User)
+                .options(selectinload(User.referees))
+                .where(User.telegram_id == telegram_id))
+            
+            user = result.scalar_one_or_none()
+
+            if not user or not user.referees:
+                return {}
+
+            # Access the backref relationship
+            referees_dict = {r.telegram_id: r.telegram_username for r in user.referees}
+            logger.warning(f'User {telegram_id} has referees: {referees_dict}')
+            return referees_dict
+        
+
+
