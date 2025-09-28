@@ -20,9 +20,9 @@ router.callback_query.middleware(UserIDMiddleware())
 
 
 
+# ==================
 # Main menu callback
-#
-#
+# ==================
 @router.callback_query(F.data == "main_menu")
 async def main_menu_callback(callback: types.CallbackQuery, telegram_id: int):
     try:
@@ -38,9 +38,11 @@ async def main_menu_callback(callback: types.CallbackQuery, telegram_id: int):
 
     await callback.answer()
 
+
+
+# =================
 # Sub menu callback
-#
-#
+# =================
 @router.callback_query(F.data == "sub_menu")
 async def sub_callback(callback: types.CallbackQuery, telegram_id: int, remnawave_service: RemnawaveService) -> None:
     """Handle /status command to check subscription status."""
@@ -79,6 +81,36 @@ async def sub_callback(callback: types.CallbackQuery, telegram_id: int, remnawav
             "Попробуйте позже или обратитесь в поддержку."
         )
 
+
+
+# ========================
+# Update sub link callback
+# ========================
+@router.callback_query(F.data == "update_sub")
+async def sub_callback(callback: types.CallbackQuery) -> None:
+    """Regenerates the sub link"""
+    keyboard = [
+        [InlineKeyboardButton(text="☑ Да", callback_data="confirm_update_sub")],        
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="sub_menu")]
+    ]
+
+    await callback.message.edit_text(
+        "🔐 <b>Генерация новой ссылки</b>\n\n"
+        "📡 <b>Почему стоит обновить ссылку?</b>\n"
+        "Это полезно, если вы считаете, что кто-то пользуется вашей ссылкой без разрешения.\n\n"
+        "⚠ <b>После генерации:</b>\n"
+        "Придётся переподключиться к сервису на всех устройствах.\n\n"
+        "❓ Хотите продолжить?",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard)
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "confirm_update_sub")
+async def confirm_update_sub(callback: types.CallbackQuery, telegram_id: int, remnawave_service: RemnawaveService):
+    await remnawave_service.update_subscription(telegram_id=telegram_id)
+    await callback.answer("Ссылка успешно обновлена!", show_alert=True)
 
 
 

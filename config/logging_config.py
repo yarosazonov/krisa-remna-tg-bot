@@ -3,7 +3,6 @@ from logging.handlers import RotatingFileHandler
 import sys
 from pathlib import Path
 
-from helpers.helpers import mb_to_bytes
 
 LOG_FILE_SIZE_MB = 5
 
@@ -16,6 +15,8 @@ def setup_logging(level: str = "INFO") -> None:
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / 'bot.log'
     
+    from helpers.helpers import mb_to_bytes
+
     logging.basicConfig(
         level=getattr(logging, level.upper()),
         format=log_format,

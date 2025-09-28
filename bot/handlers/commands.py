@@ -29,9 +29,9 @@ WELCOME_TEXT = (
 
 
 
+# =================
 # Handle the /start
-#
-#
+# =================
 @router.message(CommandStart())
 async def start_command(message: types.Message, command: CommandObject, telegram_id: int) -> None:
     """
@@ -79,9 +79,9 @@ async def start_command(message: types.Message, command: CommandObject, telegram
 
 
 
+# ================
 # Handle the /sync
-#
-#
+# ================
 @router.message(Command("sync"))
 async def sync_command(message: types.Message, telegram_id: int, remnawave_service: RemnawaveService) -> None:
     logger.info(f"User {telegram_id} requested /sync")

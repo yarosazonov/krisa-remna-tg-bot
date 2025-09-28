@@ -40,6 +40,7 @@ def get_buy_keyboard(enable_1_month: bool, enable_3_months: bool, enable_6_month
 
 def get_sub_keyboard(is_sub_found: bool = True):
     keyboard = [
+        [InlineKeyboardButton(text="🐣 Обновить ссылку", callback_data="update_sub")],        
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="main_menu")]
     ]
 

@@ -7,7 +7,7 @@ from config.logging_config import get_logger
 from datetime import datetime, timedelta, timezone
 
 from config.settings import get_settings
-from helpers.helpers import bytes_to_gb, gb_to_bytes
+from helpers.helpers import bytes_to_gb, gb_to_bytes, format_subscription_status
 from db.db_setup import add_user, revoke_trial
 
 logger = get_logger(__name__)
@@ -23,7 +23,11 @@ class RemnawaveService:
             'Authorization': f'Bearer {api_token}',
             'Content-Type': 'application/json'
         }
+ 
 
+    # =============================
+    # Getting a user from the panel
+    # =============================
     async def _get_user_by_telegram_id(self, tg_id: int) -> Optional[Dict[str, Any]]:
         try:
             async with httpx.AsyncClient() as client:
@@ -61,60 +65,9 @@ class RemnawaveService:
             logger.error(f"Unexpected error while fetching user data for tg_id: {tg_id}: {e}")
             return None
 
-    def _format_subscription_status(self, user_data: Dict[str, Any]) -> str:
-        try:
-            username = user_data.get('username', 'Н/Д')
-            status = user_data.get('status', 'UNKNOWN')
-
-            # Format basic info
-            status_text = f"Пользователь: <b>{username}</b>\n"
-            if status == "ACTIVE":
-                status_text += "Статус: ✅ <b>Активна</b>\n"
-            elif status == "INACTIVE":
-                status_text += "Статус: ❌ <b>Неактивна</b>\n"
-            else:
-                status_text += f"Статус: {status}\n"
-            # Add expiry date if available
-            if 'expireAt' in user_data and user_data['expireAt']:
-                try:
-                    # Parse ISO format date
-                    expire_date = datetime.fromisoformat(user_data['expireAt'].replace('Z', '+00:00'))
-                    # Convert to UTC+3
-                    utc3 = timezone(timedelta(hours=3))
-                    expire_date_utc3 = expire_date.astimezone(utc3)
-                    status_text += f"Истекает: {expire_date_utc3.strftime('<b>%d.%m.%Y</b> (%H:%M UTC+3)')}\n"
-                except ValueError:
-                    status_text += f"Истекает: {user_data['expireAt']}\n"
-
-            # Calculate remaining traffic if limited
-            if 'trafficLimitBytes' in user_data:
-                traffic_limit = user_data['trafficLimitBytes']
-                if traffic_limit and traffic_limit > 0:
-                    # Convert bytes to GB
-                    traffic_limit_gb = bytes_to_gb(traffic_limit)
-                    used_traffic = user_data.get('usedTrafficBytes', 0)
-                    used_traffic_gb = bytes_to_gb(used_traffic)
-                    status_text += f"\nРасход трафика: <b>{used_traffic_gb:.2f}</b> из <b>{traffic_limit_gb:.2f}</b> ГБ\n"
-                else:
-                    status_text += f"Лимит трафика: <b>Безлимитный</b>\n"
-
-            # Output the sub link
-            if 'subscriptionUrl' in user_data:
-                sub_link = user_data['subscriptionUrl']
-                status_text += f"\n⚙ <b>Ссылка на подключение:</b>\n{sub_link}"
-            else:
-                logger.error(f"Wasn't able to retrieve the user's sub page")
-
-            return status_text
-
-        except Exception as e:
-            logger.error(f"Error formatting subscription status: {e}")
-            return "❌ Ошибка при форматировании информации о подписке"
-        
-
+    # =============================
     # User creating internal method
-    #
-    #
+    # =============================
     async def _create_user(self, tg_id: int, tg_tag: str, subscription_days: int, traffic: int, internal_squads: str, trafficLimitStrategy: str = "MONTH"):
         """
         Creates a new user associated with a Telegram ID
@@ -170,10 +123,9 @@ class RemnawaveService:
             logger.error(f"Unexpected error while creating trial user for tg_id: {tg_id}: {e}")
             return None
 
-
+    # ===========================
     # User update internal method
-    #
-    #
+    # ===========================
     async def _update_user(
         self,
         uuid: str,
@@ -256,18 +208,18 @@ class RemnawaveService:
             logger.error(f"Unexpected error while updating user {uuid}: {e}")
             return None
 
-
+    # =======================================
+    # Outputs the formatted data about a user
+    # =======================================
     async def get_formatted_status(self, tg_id: int) -> Optional[str]:
         user_data = await self._get_user_by_telegram_id(tg_id)
         if not user_data:
             return None
-        return self._format_subscription_status(user_data)
+        return format_subscription_status(user_data)
 
-
-
+    # ======================================
     # Synchronizes the panel with the bot db
-    #
-    #
+    # ======================================
     async def sync_with_panel(self):
         """
         Retrieves all users from the panel and adds the to the db, revoking the trial eligibility
@@ -347,11 +299,9 @@ class RemnawaveService:
             logger.error(f"Unexpected error while fetching users: {e}")
             return None
 
-
-
+    # =====================
     # Grants a user a trial
-    #
-    #
+    # =====================
     async def grant_trial(self, tg_id: int, tg_tag: str):
         """
         Creates a new trial user associated with a Telegram ID
@@ -378,11 +328,9 @@ class RemnawaveService:
             logger.error(f"Unexpected error while creating trial user for tg_id: {tg_id}: {e}")
             return None
 
-
-
+    # ==============================
     # Handles the successful payment
-    #
-    #
+    # ==============================
     async def handle_payment(
         self,
         tg_id: int,
@@ -455,11 +403,9 @@ class RemnawaveService:
             logger.error(f"Unexpected error while handling payment for tg_id={tg_id}: {e}")
             return None
 
-
-
+    # =======================
     # Validates panel webhook
-    #
-    #
+    # =======================
     def validate_webhook(self, body, signature, webhook_secret_header):
         """Validate webhook signature"""
         logger.warning("Remna webhook validation started")
@@ -486,3 +432,36 @@ class RemnawaveService:
         ).hexdigest()
         logger.warning("Remna webhook validated")
         return hmac.compare_digest(computed_signature, signature)
+
+    # =========================
+    # Updates subscription link
+    # =========================
+    async def update_subscription(self, telegram_id: int):
+        user_info = await self._get_user_by_telegram_id(tg_id=telegram_id)
+        uuid = user_info.get("uuid")
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                url = f"{self.api_url}/api/users/{uuid}/actions/revoke"
+
+                response = await client.post(url, headers=self.headers, timeout=TIMEOUT_SECONDS)
+
+                if response.status_code == 200:
+                    logger.info(f"Successfully revoked user's subscription with tg_id: {telegram_id}")
+
+                elif response.status_code == 404:
+                    logger.info(f"Wasn't able to revoke the subscription, user not found for tg_id: {telegram_id}")
+                    return None
+                else:
+                    logger.error(f"Revoking subscription API request failed with status {response.status_code}: {response.text}")
+                    return None
+            
+        except httpx.TimeoutException:
+            logger.error(f"Timeout while fetching user data for tg_id: {telegram_id}")
+            return None
+        except httpx.RequestError as e:
+            logger.error(f"Request error while fetching user data for tg_id: {telegram_id}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error while fetching user data for tg_id: {telegram_id}: {e}")
+            return None

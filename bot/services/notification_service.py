@@ -45,7 +45,8 @@ async def remnawave_webhook_notification(bot: Bot, telegram_id:int, event: str):
     
     # Message text
     if event == "user.expires_in_24_hours":
-        message_text = ("✋ Добрый день, ровно через 24 часа ваша подписка истекает, не забудьте продлить!🤝")
+        message_text = ("✋ Добрый день!\n" 
+        "Через <b>24 часа</b> ваша подписка истекает, не забудьте продлить!🤝")
     elif event == "user.expired":
         message_text = ("🔔 Здравствуйте, ваша подписка только что истекла!\n"
         "Надеюсь что вы довольны сервисом и останетесь с нами.\n"
