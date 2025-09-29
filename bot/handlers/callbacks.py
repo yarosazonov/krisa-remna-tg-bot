@@ -95,7 +95,6 @@ async def sub_callback(callback: types.CallbackQuery) -> None:
     ]
 
     await callback.message.edit_text(
-        "🔐 <b>Генерация новой ссылки</b>\n\n"
         "📡 <b>Почему стоит обновить ссылку?</b>\n"
         "Это полезно, если вы считаете, что кто-то пользуется вашей ссылкой без разрешения.\n\n"
         "⚠ <b>После обновления:</b>\n"

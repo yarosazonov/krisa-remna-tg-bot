@@ -396,6 +396,7 @@ class RemnawaveService:
             return await self._update_user(
                 uuid=uuid,
                 expireAt=new_expire_at,
+                trafficLimitBytes=gb_to_bytes(settings.MONTHLY_TRAFFIC_GB),
                 status="ACTIVE"
             )
 
