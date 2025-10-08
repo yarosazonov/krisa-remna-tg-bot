@@ -39,12 +39,13 @@ def get_buy_keyboard(enable_1_month: bool, enable_3_months: bool, enable_6_month
 
 
 def get_sub_keyboard(is_sub_found: bool = True):
-    keyboard = [
-        [InlineKeyboardButton(text="🐣 Обновить ссылку", callback_data="update_sub")],        
+    keyboard = [        
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="main_menu")]
     ]
 
-    if not is_sub_found:
+    if is_sub_found:
+        keyboard.insert(0, [InlineKeyboardButton(text="🐣 Обновить ссылку", callback_data="update_sub")])
+    else:
         keyboard.insert(0, [InlineKeyboardButton(text="💬 Написать в поддержку", url="https://t.me/yarosazonov")])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
