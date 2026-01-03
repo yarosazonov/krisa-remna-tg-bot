@@ -265,7 +265,7 @@ class RemnawaveService:
                         break
 
 
-                if not users:
+                if not all_users:
                     logger.info(f"No users found")
                     return None
                 
@@ -439,6 +439,10 @@ class RemnawaveService:
     # =========================
     async def update_subscription(self, telegram_id: int):
         user_info = await self._get_user_by_telegram_id(tg_id=telegram_id)
+        if not user_info:
+            logger.warning(f"Cannot revoke subscription: User {telegram_id} not found.")
+            return None
+
         uuid = user_info.get("uuid")
         
         try:
