@@ -1,6 +1,8 @@
 services:
   remnawave-tg-bot:
-    build: .
+    build: 
+      context: .
+      network: host
     container_name: remnawave-tg-bot
     hostname: remnawave-tg-bot
     ports:
@@ -8,7 +10,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./db:/app/db  # Persist SQLite database on host
+      - ./db/bot.db:/app/db/bot.db  # Persist SQLite database on host
       - ./logs:/app/logs
     # network_mode: host
     networks:
