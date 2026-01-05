@@ -1,8 +1,11 @@
 from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
 import logging
 
+from config.settings import get_settings
+
+settings = get_settings()
 logger = logging.getLogger(__name__)
 
 
@@ -57,3 +60,20 @@ async def remnawave_webhook_notification(bot: Bot, telegram_id:int, event: str):
 
     # Sending the message
     await bot.send_message(chat_id=int(telegram_id), text=message_text, reply_markup=keyboard)
+
+
+
+async def send_backup_to_admin(bot: Bot, backup_path: str):
+    """
+    Sends the encrypted backup file to the admin.
+    """
+    try:
+        backup_file = FSInputFile(backup_path)
+        await bot.send_document(
+            chat_id=settings.ADMIN_ID,
+            document=backup_file,
+            caption=f"📦 Daily Backup"
+        )
+        logger.info(f"Backup sent to admin {settings.ADMIN_ID}")
+    except Exception as e:
+        logger.error(f"Failed to send backup to admin: {e}")

@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     RUB_PRICE_6_MONTHS: int
 
 
+    # Utils
+    BACKUP_PASSWORD: str
+
 
     # decorator that let's call the method like an attribute
     @property
