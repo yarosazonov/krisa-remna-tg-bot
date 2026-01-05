@@ -23,7 +23,7 @@ settings = get_settings()
 DATE = datetime.now().strftime("%d-%m-%y")
 ROOT_DIR = Path(__file__).resolve().parents[1]
 BACKUPS_DIR = ROOT_DIR / 'backups' / f'{DATE}'
-BACKUPS_DIR.mkdir(exist_ok=True)
+BACKUPS_DIR.mkdir(parents=True, exist_ok=True)
 SQLITE_DIR = ROOT_DIR / 'db'
 
 
