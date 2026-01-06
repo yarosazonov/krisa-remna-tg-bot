@@ -3,6 +3,10 @@ services:
     build: 
       context: .
       network: host
+      args:
+        USER_NAME: ${USER_NAME:-appuser}
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
     container_name: remnawave-tg-bot
     hostname: remnawave-tg-bot
     ports:
