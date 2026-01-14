@@ -13,6 +13,7 @@ from config.logging_config import get_logger, setup_logging
 from config.settings import get_settings
 
 from .archive import create_encrypted_archive, decrypt_archive
+from .cleanup import cleanup_old_backups
 from .postgres import backup_postgres, restore_postgres
 from .sqlite import backup_sqlite, restore_sqlite
 
@@ -46,6 +47,8 @@ async def run_backup() -> Path | None:
         send_backup_to_admin = _get_notification_service()
         async with Bot(token=settings.BOT_TOKEN).context() as bot:
             await send_backup_to_admin(bot, str(archive_path))
+        
+        cleanup_old_backups(BACKUPS_ROOT, settings.BACKUP_RETENTION_DAYS)
     
     return archive_path
 

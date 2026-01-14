@@ -55,6 +55,7 @@ class Settings(BaseSettings):
 
     # Utils
     BACKUP_PASSWORD: str
+    BACKUP_RETENTION_DAYS: int 
 
 
     # decorator that let's call the method like an attribute
