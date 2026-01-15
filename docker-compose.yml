@@ -14,8 +14,9 @@ services:
     env_file:
       - .env
     volumes:
-      - ./db/bot.db:/app/db/bot.db  # Persist SQLite database on host
-      - ./logs:/app/logs
+      # named volume for db and host bind mount for logs
+      - bot-db:/app/data/db
+      - ./data/logs:/app/data/logs  
     # network_mode: host
     networks:
       - remnawave-network
@@ -25,3 +26,6 @@ networks:
   remnawave-network:
     external: true
 
+volumes:
+  bot-db:
+    driver: local

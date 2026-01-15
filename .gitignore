@@ -1,13 +1,13 @@
 __pycache__/
 venv/
 .venv/
+.envrc
 
 .env
 
-*.db
-
-logs/*
-!logs/.gitkeep
+data/db/*.db
+data/logs/*
+!data/logs/.gitkeep
 
 backups/*
 !/backups/.gitkeep

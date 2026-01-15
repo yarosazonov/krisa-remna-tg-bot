@@ -11,10 +11,10 @@ from config.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# .db is created in the __file__ folder
-BASE_DIR = Path(__file__).resolve().parent
+# Data directory for runtime files (separate from code)
+DATA_DIR = Path(__file__).resolve().parents[1] / 'data' / 'db'
 DB_NAME = 'bot.db'
-DATABASE_URL = f"sqlite+aiosqlite:///{BASE_DIR}/{DB_NAME}"
+DATABASE_URL = f"sqlite+aiosqlite:///{DATA_DIR}/{DB_NAME}"
 
 # Creating the engine 
 engine = create_async_engine(DATABASE_URL, echo=True)
