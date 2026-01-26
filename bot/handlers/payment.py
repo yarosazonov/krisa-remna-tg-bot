@@ -2,34 +2,58 @@ import math
 from aiogram import Bot
 
 from config import get_logger, get_settings
-from bot.services import RemnawaveService, balance_credit_notify
+from bot.services import RemnawaveService, YooKassaService, balance_credit_notify
 from db import get_user, update_user
 from helpers import months_to_days
 
 logger = get_logger(__name__)
 
 
-
-async def handle_yookassa_update(event: str, obj: dict, remnawave_service: RemnawaveService, bot: Bot):
+async def handle_yookassa_update(
+    event: str, 
+    obj: dict, 
+    remnawave_service: RemnawaveService, 
+    yookassa_service: YooKassaService, 
+    bot: Bot
+):
     """
     Handles YooKassa payment events.
     """
     settings = get_settings()
     try:
         if event == "payment.succeeded":
-            metadata = obj.get("metadata", {})
+            # 1. Extract Payment ID
+            payment_id = obj.get("id")
+            if not payment_id:
+                logger.error(f"Missing payment ID in payment.succeeded event: {obj}")
+                return
+
+            # 2. Verify with YooKassa API 
+            logger.info(f"Verifying payment {payment_id} with YooKassa API...")
+            payment_info = await yookassa_service.get_payment_info(payment_id)
+
+            if not payment_info:
+                logger.error(f"Verification failed: Could not fetch payment {payment_id} from YooKassa.")
+                return
+
+            if payment_info.get("status") != "succeeded":
+                logger.warning(f"Verification failed: Payment {payment_id} status is {payment_info.get('status')}, expected 'succeeded'.")
+                return
+            
+            # 3. Use Metadata from API Response
+            metadata = payment_info.get("metadata", {})
             tg_id_str = metadata.get("telegram_id")
             subscription_months_str = metadata.get("subscription_months")
 
             if not tg_id_str or not subscription_months_str:
-                logger.error(f"Missing metadata in payment.succeeded event: {metadata}")
+                logger.error(f"Missing metadata in verified payment {payment_id}: {metadata}")
                 return
 
             try:
                 tg_id = int(tg_id_str)
                 subscription_months = int(subscription_months_str)
             except ValueError:
-                logger.error(f"Invalid metadata values: {metadata}")
+                logger.error(f"Invalid metadata values in verified payment {payment_id}: {metadata}")
                 return
 
             # Convert months → days 
@@ -38,7 +62,8 @@ async def handle_yookassa_update(event: str, obj: dict, remnawave_service: Remna
             # For simplicity, set traffic and squads defaults; modify as needed
             tg_tag = metadata.get("user_tag")
 
-            logger.info(f"Processing successful payment for tg_id={tg_id}: +{subscription_days} days")
+            logger.info(f"Verified payment {payment_id} for tg_id={tg_id}: +{subscription_days} days")
+            
             # Trigger the payment handling in background
             await remnawave_service.handle_payment(
                 tg_id=tg_id,
@@ -61,7 +86,8 @@ async def handle_yookassa_update(event: str, obj: dict, remnawave_service: Remna
             if user_referrer_id:
                 try:
                     referrer =  await get_user(telegram_id=user_referrer_id)
-                    paid_amount = float(obj.get("amount", {}).get("value", 0))
+                    # Use trusted amount from API
+                    paid_amount = payment_info.get("amount_value", 0.0) 
                     paid_amount = int(paid_amount)
                 except Exception as e:
                     logger.error(f"Error while getting paid amount to update internal balance: {e}")
@@ -99,4 +125,4 @@ async def handle_yookassa_update(event: str, obj: dict, remnawave_service: Remna
             logger.warning(f"Unhandled YooKassa event type: {event}")
 
     except Exception as e:
-        logger.error(f"Error handling YooKassa update: {e}")
+        logger.error(f"Error handling YooKassa update: {e}", exc_info=True)

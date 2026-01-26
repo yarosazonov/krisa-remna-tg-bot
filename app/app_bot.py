@@ -126,11 +126,12 @@ def create_app(settings):
                     event=event, 
                     obj=obj, 
                     remnawave_service=remnawave_service,
+                    yookassa_service=yookassa_service,
                     bot=bot
                     ))
                 return {"ok": True}
 
-            logger.warning(f"Found X-Forwarded-For header: {ip}")
+            logger.info(f"Found X-Forwarded-For header: {ip}")
             ip = ip.split(",")[0].strip()
             if not yookassa_service.is_ip_valid(ip=ip):
                     raise HTTPException(status_code=401, detail="Ip is not a valid yookassa ip")
@@ -140,6 +141,7 @@ def create_app(settings):
                 event=event, 
                 obj=obj, 
                 remnawave_service=remnawave_service, 
+                yookassa_service=yookassa_service,
                 bot=bot
                 ))
             return {"ok": True}
