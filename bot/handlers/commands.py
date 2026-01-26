@@ -17,13 +17,15 @@ router = Router()
 router.message.middleware(UserIDMiddleware())
 
 # Insert welcome text, also used in main_menu callback
+settings = get_settings()
 WELCOME_TEXT = (
     "👋 Добро пожаловать в <b>КрысаВПН</b> bot 2.0!\n\n"
     "У нас:\n\n"
     "💡 <b>Идея:</b> интернет должен быть свободным!\n"
     "⚡ <b>Высокая скорость:</b> наши сервера не забиты под завязку.\n"
     "💰 <b>Низкие цены:</b> наш приоритет — доступность.\n"
-    "🤝 <b>Возможность заработать:</b> крутая реферальная программа!"
+    "🤝 <b>Возможность заработать:</b> крутая реферальная программа!\n\n"
+    f"🔔 Канал: {settings.CHANNEL_TAG}"
 )
 
 

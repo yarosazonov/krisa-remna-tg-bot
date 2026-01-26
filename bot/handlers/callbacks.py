@@ -116,12 +116,14 @@ async def confirm_update_sub(callback: types.CallbackQuery, telegram_id: int, re
 # ============
 @router.callback_query(F.data == "buy_menu")
 async def buy_callback(callback: types.CallbackQuery):
+    # Retrieve and format servers from settings
+    raw_servers = settings.AVAILABLE_SERVERS
+    formatted_servers = "\n".join(f"   {s.strip()}" for s in raw_servers.split(","))
+
     await callback.message.edit_text(
         "Оплачивая подписку, вы получаете:\n\n"
-        "<b>Доступ к серверам:</b>\n"
-        "🇳🇱 Нидерланды\n"
-        "🇺🇸 США\n"
-        "🇯🇵 Япония\n\n"
+        "<b>Доступ к локациям:</b>\n"
+        f"{formatted_servers}\n\n"
         "💻 Неограниченное количество устройств\n\n"
         "📦 250 ГБ трафика ежемесячно\n\n"
         "💳 Выберите срок продления подписки:",
@@ -570,7 +572,7 @@ async def withdrawal_rules_callback(callback: types.CallbackQuery):
 @router.callback_query(F.data == "balance_menu")
 async def check_referees_callback(callback: types.CallbackQuery, telegram_id: int):
     keys = [
-        [InlineKeyboardButton(text="💬 Запросить вывод", url="https://t.me/yarosazonov")],
+        [InlineKeyboardButton(text="💬 Запросить вывод", url=settings.SUPPORT_TG_LINK)],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="main_menu")]
     ]
     try:

@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     # Bot specific
     BOT_TOKEN: str
     ADMIN_ID: int
+    SUPPORT_TG_LINK: str
+    CHANNEL_TAG: str
 
     # FastAPI
     DOMAIN: str
@@ -25,6 +27,7 @@ class Settings(BaseSettings):
     REMNAWAVE_API_URL: str
     REMNAWAVE_API_TOKEN: str
     SQUADS: str
+    AVAILABLE_SERVERS: str
     REMNAWAVE_WEBHOOK_PATH: str
     REMNAWAVE_WEBHOOK_SECRET_HEADER: str
 
@@ -51,12 +54,6 @@ class Settings(BaseSettings):
 
     ENABLE_6_MONTHS: bool
     RUB_PRICE_6_MONTHS: int
-
-
-    # Utils
-    BACKUP_PASSWORD: str
-    BACKUP_RETENTION_DAYS: int 
-
 
     # decorator that let's call the method like an attribute
     @property

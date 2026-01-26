@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from config import get_settings
 
-
+settings = get_settings()
 
 def get_main_menu_keyboard(show_trial: bool):
     keyboard = [
@@ -10,8 +11,7 @@ def get_main_menu_keyboard(show_trial: bool):
             InlineKeyboardButton(text="🤑 Бонусы 10%", callback_data="bonus_menu"),
             InlineKeyboardButton(text="💰 Баланс", callback_data="balance_menu")
         ],
-        [InlineKeyboardButton(text="💬 Поддержка", url="https://t.me/yarosazonov")],
-        [InlineKeyboardButton(text="🔔 Канал", url="https://t.me/krisavpn")]
+        [InlineKeyboardButton(text="💬 Поддержка", url=settings.SUPPORT_TG_LINK)]
     ]
 
     if show_trial:
@@ -46,7 +46,8 @@ def get_sub_keyboard(is_sub_found: bool = True):
     if is_sub_found:
         keyboard.insert(0, [InlineKeyboardButton(text="🐣 Обновить ссылку", callback_data="update_sub")])
     else:
-        keyboard.insert(0, [InlineKeyboardButton(text="💬 Написать в поддержку", url="https://t.me/yarosazonov")])
+        settings = get_settings()
+        keyboard.insert(0, [InlineKeyboardButton(text="💬 Написать в поддержку", url=settings.SUPPORT_TG_LINK)])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
