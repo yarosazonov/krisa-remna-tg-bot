@@ -1,10 +1,9 @@
 import uvicorn
 import asyncio
 
-from config.settings import get_settings
-from config.logging_config import setup_logging
+from config import get_settings, setup_logging
 from app.app_bot import create_app
-from db.db_setup import init_db
+from db import init_db
 
 
 

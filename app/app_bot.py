@@ -5,11 +5,9 @@ from aiogram import types
 from contextlib import asynccontextmanager
 
 from bot.main_bot import init_bot
-from config.logging_config import get_logger
-from bot.handlers.payment import handle_yookassa_update
-from bot.services.yookassa_service import YooKassaService
-from bot.services.remnawave_service import RemnawaveService
-from bot.services.notification_service import remnawave_webhook_notification
+from config import get_logger
+from bot.handlers import handle_yookassa_update
+from bot.services import YooKassaService, RemnawaveService, remnawave_webhook_notification
 
 logger = get_logger(__name__)
 

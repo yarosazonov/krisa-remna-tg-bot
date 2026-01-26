@@ -1,9 +1,8 @@
 from aiogram import Bot, Dispatcher
 
-from bot.handlers import commands, callbacks
-from bot.services.yookassa_service import YooKassaService
-from bot.services.remnawave_service import RemnawaveService
-from config.logging_config import get_logger
+from bot.handlers import commands_router, callbacks_router
+from bot.services import YooKassaService, RemnawaveService
+from config import get_logger
 from bot.middlewares.id_check_middleware import UserIDMiddleware
 
 logger = get_logger(__name__)
@@ -28,8 +27,8 @@ async def init_bot(
 
 
     # Including routers
-    dp.include_router(commands.router)
-    dp.include_router(callbacks.router)
+    dp.include_router(commands_router)
+    dp.include_router(callbacks_router)
 
     logger.info("Bot initialized successfully")
     return bot, dp

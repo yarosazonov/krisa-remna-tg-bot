@@ -3,11 +3,10 @@ from aiogram.filters import Command, CommandStart
 from aiogram.filters.command import CommandObject
 from aiogram.types import FSInputFile
 
-from config.logging_config import get_logger
-from db.db_setup import add_user, get_user, update_user
+from config import get_logger, get_settings
+from db import add_user, get_user, update_user
 from bot.keyboards.user_keyboards import get_main_menu_keyboard
-from config.settings import get_settings
-from bot.services.remnawave_service import RemnawaveService
+from bot.services import RemnawaveService
 from bot.middlewares.id_check_middleware import UserIDMiddleware
 
 

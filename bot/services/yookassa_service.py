@@ -2,13 +2,13 @@ import uuid
 import asyncio
 from typing import Optional, Dict, Any, List
 
-from config.logging_config import get_logger
+from config import get_logger
 from yookassa import Configuration, Payment as YooKassaPayment
 from yookassa.domain.request.payment_request_builder import PaymentRequestBuilder
 from yookassa.domain.common.confirmation_type import ConfirmationType
 from yookassa.domain.common import SecurityHelper
 
-from config.settings import Settings
+from config import Settings
 
 logger = get_logger(__name__)
 

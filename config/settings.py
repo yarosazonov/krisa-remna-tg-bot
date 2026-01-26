@@ -1,4 +1,4 @@
-from config.logging_config import get_logger
+from config.logging_config import get_logger  # Use direct import to avoid circular import
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import ValidationError
 from typing import Optional

@@ -3,7 +3,7 @@ from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
 import logging
 
-from config.settings import get_settings
+from config import get_settings
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ async def remnawave_webhook_notification(bot: Bot, telegram_id:int, event: str):
         message_text = ("🔔 Добрый день! У вас кончился траффик.🤯\nЕсли вы хотите приобрести дополнительный пакет - обратитесь в поддержку🤝")
 
     # Sending the message
-    await bot.send_message(chat_id=int(telegram_id), text=message_text, reply_markup=keyboard)
+    await bot.send_message(chat_id=int(telegram_id), text=message_text, parse_mode="HTML", reply_markup=keyboard)
 
 
 

@@ -16,7 +16,7 @@ def setup_logging(level: str = "INFO") -> None:
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / 'bot.log'
     
-    from helpers.helpers import mb_to_bytes
+    from helpers import mb_to_bytes
 
     logging.basicConfig(
         level=getattr(logging, level.upper()),

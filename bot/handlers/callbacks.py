@@ -1,16 +1,14 @@
 from aiogram import types, Router, F, Bot
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.deep_linking import create_start_link
-from config.logging_config import get_logger
-from config.settings import get_settings
+from config import get_logger, get_settings
 
-from db.db_setup import revoke_trial, get_user, get_referees, update_user
+from db import revoke_trial, get_user, get_referees, update_user
 from bot.keyboards.user_keyboards import get_main_menu_keyboard, get_sub_keyboard, get_buy_keyboard, get_trial_keyboard
 from bot.middlewares.id_check_middleware import UserIDMiddleware
-from bot.services.remnawave_service import RemnawaveService
-from bot.services.yookassa_service import YooKassaService
-from bot.handlers.commands import WELCOME_TEXT
-from helpers.helpers import get_subscription_map, months_to_days
+from bot.services import RemnawaveService, YooKassaService
+from bot.handlers import WELCOME_TEXT
+from helpers import get_subscription_map, months_to_days
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -120,7 +118,11 @@ async def confirm_update_sub(callback: types.CallbackQuery, telegram_id: int, re
 async def buy_callback(callback: types.CallbackQuery):
     await callback.message.edit_text(
         "Оплачивая подписку, вы получаете:\n\n"
-        "🌍 Доступ ко всем серверам\n"
+        "<b>Доступ к серверам:</b>\n"
+        "🇳🇱 Нидерланды\n"
+        "🇺🇸 США\n"
+        "🇯🇵 Япония\n\n"
+        "💻 Неограниченное количество устройств\n\n"
         "📦 250 ГБ трафика ежемесячно\n\n"
         "💳 Выберите срок продления подписки:",
         parse_mode="HTML",
