@@ -19,7 +19,7 @@ async def balance_credit_notify(bot: Bot, telegram_id: int, referee, balance_cre
     ]
 
     message_text = (
-        f"💳 Клиент @{referee.telegram_username} оплатил подписку\n"
+        f"💳 @{referee.telegram_username} оплатил подписку\n"
         f"🎉 Ваш баланс пополнен на <b>{balance_credit} RUB</b>"
     )
 

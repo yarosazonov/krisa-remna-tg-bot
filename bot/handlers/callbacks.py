@@ -118,7 +118,7 @@ async def confirm_update_sub(callback: types.CallbackQuery, telegram_id: int, re
 async def buy_callback(callback: types.CallbackQuery):
     # Retrieve and format servers from settings
     raw_servers = settings.AVAILABLE_SERVERS
-    formatted_servers = "\n".join(f"   {s.strip()}" for s in raw_servers.split(","))
+    formatted_servers = "\n".join(f"{s.strip()}" for s in raw_servers.split(","))
 
     await callback.message.edit_text(
         "Оплачивая подписку, вы получаете:\n\n"
