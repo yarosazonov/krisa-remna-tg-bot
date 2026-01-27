@@ -8,6 +8,8 @@ from db.db_setup import (
     revoke_trial,
     get_referees,
     User,
+    check_payment_processed,
+    add_processed_payment
 )
 
 __all__ = [
@@ -18,4 +20,6 @@ __all__ = [
     "revoke_trial",
     "get_referees",
     "User",
+    "check_payment_processed",
+    "add_processed_payment"
 ]
