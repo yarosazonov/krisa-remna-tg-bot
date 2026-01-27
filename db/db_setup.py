@@ -1,5 +1,5 @@
 from pathlib import Path
-from sqlalchemy import Column, Integer, Boolean, ForeignKey, String
+from sqlalchemy import Column, Integer, Boolean, ForeignKey, String, DateTime, func
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, selectinload
 from sqlalchemy.future import select
@@ -210,4 +210,40 @@ async def get_referees(telegram_id: int) -> List:
             return referees_dict
         
 
+
+
+# Processed Payment table
+class ProcessedPayment(Base):
+    """
+    Table to store processed payment IDs for idempotency.
+    """
+    __tablename__ = "processed_payments"
+
+    payment_id = Column(String, primary_key=True)
+    telegram_id = Column(Integer, nullable=False)
+    amount = Column(Integer, nullable=True)
+    # autofill at the moment of the entry creation
+    created_at = Column(DateTime(timezone=True), server_default=func.now()) 
+
+
+async def check_payment_processed(payment_id: str) -> bool:
+    """Checks if a payment_id has already been processed."""
+    async with async_session() as session:
+        result = await session.execute(
+            select(ProcessedPayment).where(ProcessedPayment.payment_id == payment_id)
+        )
+        return result.scalar_one_or_none() is not None
+
+
+async def add_processed_payment(payment_id: str, telegram_id: int, amount: int = 0):
+    """Adds a payment_id to the processed list."""
+    async with async_session() as session:
+        async with session.begin():
+            payment = ProcessedPayment(
+                payment_id=payment_id,
+                telegram_id=telegram_id,
+                amount=amount
+            )
+            session.add(payment)
+        await session.commit()
 

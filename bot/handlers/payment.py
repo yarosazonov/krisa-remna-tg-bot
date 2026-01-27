@@ -3,7 +3,7 @@ from aiogram import Bot
 
 from config import get_logger, get_settings
 from bot.services import RemnawaveService, YooKassaService, balance_credit_notify
-from db import get_user, update_user
+from db import get_user, update_user, check_payment_processed, add_processed_payment
 from helpers import months_to_days
 
 logger = get_logger(__name__)
@@ -26,6 +26,11 @@ async def handle_yookassa_update(
             payment_id = obj.get("id")
             if not payment_id:
                 logger.error(f"Missing payment ID in payment.succeeded event: {obj}")
+                return
+
+            # Idempotency check 
+            if await check_payment_processed(payment_id):
+                logger.info(f"Payment {payment_id} already processed. Skipping.")
                 return
 
             # 2. Verify with YooKassa API 
@@ -116,6 +121,10 @@ async def handle_yookassa_update(
                     logger.warning(f"Wasn't able to notify the user with id {user_referrer_id} about his balance top up: {e}")
             else:
                 logger.info(f"No referrer for the user {tg_id}")
+
+            # Mark payment as processed
+            await add_processed_payment(payment_id, tg_id, int(paid_amount))
+            logger.info(f"Payment {payment_id} marked as processed.")
 
         elif event == "payment.canceled":
             logger.info(f"Payment canceled: {obj.get('id')}")
