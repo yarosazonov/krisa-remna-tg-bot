@@ -159,7 +159,7 @@ class RemnawaveService:
         """
         try:
             async with httpx.AsyncClient() as client:
-                url = f"{self.api_url}/api/users/"
+                url = f"{self.api_url}/api/users"
 
                 # Building the payload using dict comprehension
                 payload: Dict[str, Any] = {
