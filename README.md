@@ -49,15 +49,4 @@ krisa-remna-tg-bot/
    ```bash
    docker compose up -d --build
    ```
-
-## ⚙️ Configuration
-
-| Variable | Description |
-|----------|-------------|
-| `BOT_TOKEN` | Telegram bot token from @BotFather |
-| `ADMIN_ID` | Telegram user ID for admin commands |
-| `REMNAWAVE_API_URL` | Panel API URL |
-| `REMNAWAVE_API_TOKEN` | Panel API token |
-| `SQUADS` | Comma-separated squad UUIDs |
-| `TRIAL_DAYS` / `TRIAL_TRAFFIC_GB` | Trial subscription parameters |
-| `YOOKASSA_SHOP_ID` / `YOOKASSA_SECRET_KEY` | Payment credentials |
+   
