@@ -9,7 +9,8 @@ from db.db_setup import (
     get_referees,
     User,
     check_payment_processed,
-    add_processed_payment
+    add_processed_payment,
+    deduct_balance
 )
 
 __all__ = [
@@ -21,5 +22,6 @@ __all__ = [
     "get_referees",
     "User",
     "check_payment_processed",
-    "add_processed_payment"
+    "add_processed_payment",
+    "deduct_balance"
 ]

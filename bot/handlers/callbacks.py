@@ -3,7 +3,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.deep_linking import create_start_link
 from config import get_logger, get_settings
 
-from db import revoke_trial, get_user, get_referees, update_user
+from db import revoke_trial, get_user, get_referees, update_user, deduct_balance
 from bot.keyboards.user_keyboards import get_main_menu_keyboard, get_sub_keyboard, get_buy_keyboard, get_trial_keyboard
 from bot.middlewares.id_check_middleware import UserIDMiddleware
 from bot.services import RemnawaveService, YooKassaService
@@ -284,12 +284,36 @@ async def payment_callback(
                 keys = [
                     [InlineKeyboardButton(text="🏡 Главное меню", callback_data="main_menu")]
                 ]
-                await remnawave_service.handle_payment(
-                    tg_id=telegram_id, 
-                    tg_tag=user_tag, 
-                    subscription_days=months_to_days(sub_info["months"])
+                
+                # 1. Deduct first
+                if not await deduct_balance(telegram_id, price):
+                     await callback.message.edit_text(
+                        "❌ <b>Ошибка оплаты</b>\n\n"
+                        "Недостаточно средств на балансе (возможно, они были потрачены).",
+                         parse_mode="HTML"
+                     )
+                     return
+
+                # 2. Grant subscription
+                try: 
+                    await remnawave_service.handle_payment(
+                        tg_id=telegram_id, 
+                        tg_tag=user_tag, 
+                        subscription_days=months_to_days(sub_info["months"])
+                        )
+                except Exception as e:
+                    logger.error(f"Failed to grant subscription via Remnawave for {telegram_id}: {e}. REFUNDING BALANCE.")
+                    await update_user(telegram_id=telegram_id, balance_increment=price)
+                    await callback.message.edit_text(
+                        "❌ <b>Ошибка активации</b>\n\n"
+                        "Произошла ошибка при выдаче подписки. Средства возвращены на баланс.",
+                        parse_mode="HTML"
                     )
-                user_db = await update_user(telegram_id=telegram_id, balance_increment=-price)
+                    return
+
+                # Success
+                # Fetch updated user to show correct balance
+                user_db = await get_user(telegram_id=telegram_id)
                 await callback.message.edit_text(
                     f"✅ {sub_info['description']} успешно оплачена!\n\n"
                     f"Новый баланс: <b>{user_db.balance} RUB</b>",

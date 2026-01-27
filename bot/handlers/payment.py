@@ -3,7 +3,7 @@ from aiogram import Bot
 
 from config import get_logger, get_settings
 from bot.services import RemnawaveService, YooKassaService, balance_credit_notify
-from db import get_user, update_user, check_payment_processed, add_processed_payment
+from db import get_user, update_user, check_payment_processed, add_processed_payment, deduct_balance
 from helpers import months_to_days, get_subscription_map
 
 logger = get_logger(__name__)
@@ -128,23 +128,42 @@ async def handle_yookassa_update(
             logger.info(f"Payment verified: {paid_amount} paid + {balance_contribution} balance >= {expected_price} price.")
             logger.info(f"Verified payment {payment_id} for tg_id={tg_id}: +{subscription_days} days")
             
-            # 5. Trigger the payment handling in background
+            # 5. Deduct Balance First 
             #
-            await remnawave_service.handle_payment(
-                tg_id=tg_id,
-                tg_tag=tg_tag,
-                subscription_days=subscription_days
-            )
-            
-            # 6. Balance operations
-            #
-            user = await get_user(telegram_id=tg_id)
-
             reset_balance = metadata.get("reset_balance")
-            if str(reset_balance).lower() == "true":
-                logger.warning(f"Balance reset: {reset_balance}. Reseting the balance")
-                balance = user.balance
-                await update_user(telegram_id=tg_id, balance_increment=-balance)
+            is_balance_reset = str(reset_balance).lower() == "true"
+            balance_deducted = 0
+
+            if is_balance_reset and balance_contribution > 0:
+                logger.info(f"Attempting deduction of {balance_contribution} for user {tg_id}")
+                if not await deduct_balance(telegram_id=tg_id, amount=balance_contribution):
+                    logger.error(f"RACE CONDITION DETECTED: User {tg_id} tried to spend {balance_contribution} but failed deduction.")
+                    # Notify user about failure
+                    try:
+                        await bot.send_message(
+                            chat_id=tg_id,
+                            text="⚠️ <b>Ошибка оплаты</b>\n\nНе удалось списать средства с баланса (возможно, они уже были потрачены). Обратитесь в поддержку.",
+                            parse_mode="HTML"
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to notify user {tg_id} about race condition: {e}")
+                    return
+                balance_deducted = balance_contribution
+
+            # 6. Trigger the payment handling
+            #
+            try:
+                await remnawave_service.handle_payment(
+                    tg_id=tg_id,
+                    tg_tag=tg_tag,
+                    subscription_days=subscription_days
+                )
+            except Exception as e:
+                logger.error(f"Failed to grant subscription via Remnawave for {tg_id}: {e}. REFUNDING BALANCE.")
+                if balance_deducted > 0:
+                    await update_user(telegram_id=tg_id, balance_increment=balance_deducted)
+                    logger.info(f"Refunded {balance_deducted} to user {tg_id}")
+                return
 
             # Updating referrers internal balance
             user_referrer_id = user.referrer_id

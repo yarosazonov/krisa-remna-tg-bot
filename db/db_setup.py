@@ -159,6 +159,31 @@ async def update_user(
         return updated_user
 
 
+async def deduct_balance(telegram_id: int, amount: int) -> bool:
+    """
+    Deducts amount from user's balance if sufficient.
+    Returns True if deduction was successful, False if insufficient balance or user not found.
+    """
+    async with async_session() as session:
+        async with session.begin():
+            # Check sufficiency and update in one atomic statement
+            stmt = (
+                update(User)
+                .where(User.telegram_id == telegram_id)
+                .where(User.balance >= amount)
+                .values(balance=User.balance - amount)
+            )
+            result = await session.execute(stmt)
+            
+            # rowcount will be 1 if update happened, 0 if condition failed
+            if result.rowcount > 0:
+                logger.info(f"Atomically deducted {amount} from user {telegram_id}")
+                return True
+            else:
+                logger.warning(f"Failed to deduct {amount} from user {telegram_id}: Insufficient balance or user not found.")
+                return False
+
+
 
 
 # Revoking a trial
