@@ -23,7 +23,6 @@ krisa-remna-tg-bot/
 │   └── services/       # Remnawave API & payment services
 ├── config/             # Pydantic settings & logging configuration
 ├── db/                 # SQLite database setup
-├── docker-compose.yml
 └── helpers/            # Utils
 ```
 

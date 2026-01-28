@@ -407,14 +407,14 @@ class RemnawaveService:
     # =======================
     def validate_webhook(self, body, signature, webhook_secret_header):
         """Validate webhook signature"""
-        logger.warning("Remna webhook validation started")
+        logger.info("Remna webhook validation started")
         
         if isinstance(body, bytes):
             body = body.decode("utf-8")
 
         if isinstance(body, str):
             original_body = body
-            logger.warning("Body is string, parsing for logging...")
+            logger.info("Body is string, parsing for logging...")
             try:
                 parsed_body = json.loads(body)
             except json.JSONDecodeError as e:
@@ -429,7 +429,7 @@ class RemnawaveService:
             original_body.encode('utf-8'),
             hashlib.sha256
         ).hexdigest()
-        logger.warning("Remna webhook validated")
+        logger.info("Remna webhook validated")
         return hmac.compare_digest(computed_signature, signature)
 
     # =========================

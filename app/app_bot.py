@@ -168,7 +168,7 @@ def create_app(settings):
         
         payload = json.loads(body)
         event = payload.get("event")
-        logger.warning(f"Remna webhook event: {event}")
+        logger.info(f"Remna webhook event: {event}")
         if event not in ("user.expires_in_24_hours", "user.expired", "user.limited"):
             return {"status": "ok"}
         user = payload.get("data", {})

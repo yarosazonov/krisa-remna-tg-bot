@@ -218,7 +218,7 @@ async def get_referees(telegram_id: int) -> List:
     """
     async with async_session() as session:
         async with session.begin():
-            logger.warning(f'Looking for the referred users for telegram_id: {telegram_id}')
+            logger.info(f'Looking for the referred users for telegram_id: {telegram_id}')
             result = await session.execute(
                 select(User)
                 .options(selectinload(User.referees))
@@ -231,7 +231,7 @@ async def get_referees(telegram_id: int) -> List:
 
             # Access the backref relationship
             referees_dict = {r.telegram_id: r.telegram_username for r in user.referees}
-            logger.warning(f'User {telegram_id} has referees: {referees_dict}')
+            logger.info(f'User {telegram_id} has referees: {referees_dict}')
             return referees_dict
         
 
