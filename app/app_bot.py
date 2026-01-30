@@ -8,6 +8,7 @@ from bot.main_bot import init_bot
 from config import get_logger
 from bot.handlers import handle_yookassa_update
 from bot.services import YooKassaService, RemnawaveService, remnawave_webhook_notification
+from yookassa.domain.common import SecurityHelper
 
 logger = get_logger(__name__)
 
@@ -118,7 +119,8 @@ def create_app(settings):
             if not ip:
                 logger.info("No X-Forwarded-For header, taking the direct ip")
                 ip = request.client.host 
-                if not yookassa_service.is_ip_valid(ip=ip):
+                if not SecurityHelper().is_ip_trusted(ip):
+                    logger.warning(f"YooKassa webhook IP not trusted: {ip}")
                     raise HTTPException(status_code=401, detail="Ip is not a valid yookassa ip")
                 
                 # Yookassa payment update handler
@@ -133,8 +135,9 @@ def create_app(settings):
 
             logger.info(f"Found X-Forwarded-For header: {ip}")
             ip = ip.split(",")[0].strip()
-            if not yookassa_service.is_ip_valid(ip=ip):
-                    raise HTTPException(status_code=401, detail="Ip is not a valid yookassa ip")
+            if not SecurityHelper().is_ip_trusted(ip):
+                logger.warning(f"YooKassa webhook IP not trusted: {ip}")
+                raise HTTPException(status_code=401, detail="Ip is not a valid yookassa ip")
             
             # Yookassa payment update handler
             asyncio.create_task(handle_yookassa_update(

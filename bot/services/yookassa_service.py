@@ -6,7 +6,6 @@ from config import get_logger
 from yookassa import Configuration, Payment as YooKassaPayment
 from yookassa.domain.request.payment_request_builder import PaymentRequestBuilder
 from yookassa.domain.common.confirmation_type import ConfirmationType
-from yookassa.domain.common import SecurityHelper
 
 from config import Settings
 
@@ -252,12 +251,3 @@ class YooKassaService:
                 f"YooKassa get payment info for {payment_id_in_yookassa} failed: {e}",
                 exc_info=True)
             return None
-
-
-    def is_ip_valid(self, ip):
-    # Is ip in yookassa's ranges?
-        if not SecurityHelper().is_ip_trusted(ip):
-            logger.warning(f"Yookassa webhook request ip didn't pass the check, ip:{ip}")
-            return False
-        logger.info(f"Yookassa webhook request passed the ip check, ip: {ip}")
-        return True
