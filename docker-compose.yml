@@ -1,5 +1,6 @@
 services:
-  remnawave-tg-bot:
+  krisa-bot:
+    image: krisa-bot:latest
     build: 
       context: .
       network: host
@@ -7,8 +8,8 @@ services:
         USER_NAME: ${USER_NAME:-appuser}
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
-    container_name: remnawave-tg-bot
-    hostname: remnawave-tg-bot
+    container_name: krisa-bot
+    hostname: krisa-bot
     ports:
       - "8080:8080"
     env_file:
