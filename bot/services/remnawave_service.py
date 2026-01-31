@@ -29,7 +29,7 @@ class RemnawaveService:
     async def _get_user_by_telegram_id(self, tg_id: int) -> Optional[Dict[str, Any]]:
         try:
             async with httpx.AsyncClient() as client:
-                url = f"{self.api_url}/api/users/by-telegram-id/{tg_id}"
+                url = f"{self.api_url}/users/by-telegram-id/{tg_id}"
                 logger.info(f"Fetching user data for tg_id: {tg_id}")
 
                 response = await client.get(url, headers=self.headers, timeout=TIMEOUT_SECONDS)
@@ -82,7 +82,7 @@ class RemnawaveService:
         """
         try:
             async with httpx.AsyncClient() as client:
-                url = f"{self.api_url}/api/users"
+                url = f"{self.api_url}/users"
 
                 expire_at = (datetime.now(timezone.utc) + timedelta(days=subscription_days)).isoformat().replace("+00:00", "Z")
                 username = f"{tg_tag}_{tg_id}"
@@ -159,7 +159,7 @@ class RemnawaveService:
         """
         try:
             async with httpx.AsyncClient() as client:
-                url = f"{self.api_url}/api/users"
+                url = f"{self.api_url}/users"
 
                 # Building the payload using dict comprehension
                 payload: Dict[str, Any] = {
@@ -226,7 +226,7 @@ class RemnawaveService:
         """
         try:
             async with httpx.AsyncClient() as client:
-                url = f"{self.api_url}/api/users"
+                url = f"{self.api_url}/users"
                 logger.info(f"Syncing with the panel")
                 
                 # API responce is paginated
@@ -445,7 +445,7 @@ class RemnawaveService:
         
         try:
             async with httpx.AsyncClient() as client:
-                url = f"{self.api_url}/api/users/{uuid}/actions/revoke"
+                url = f"{self.api_url}/users/{uuid}/actions/revoke"
 
                 response = await client.post(url, headers=self.headers, timeout=TIMEOUT_SECONDS)
 
