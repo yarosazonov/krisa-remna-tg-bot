@@ -1,6 +1,13 @@
 services:
   krisa-bot:
-    image: ghcr.io/yarosazonov/krisa-remna-tg-bot:latest
+    build:
+      context: .
+      network: host
+      args:
+        USER_NAME: ${USER_NAME:-appuser}
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    image: krisa-bot:dev
     container_name: krisa-bot
     hostname: krisa-bot
     ports:
@@ -8,8 +15,10 @@ services:
     env_file:
       - .env
     volumes:
+      # named volume for db and host bind mount for logs
       - bot-db:/app/data/db
-      - ./data/logs:/app/data/logs
+      - ./data/logs:/app/data/logs  
+    # network_mode: host
     networks:
       - remnawave-network
     restart: unless-stopped

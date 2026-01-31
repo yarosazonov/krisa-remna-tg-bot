@@ -44,8 +44,13 @@ krisa-remna-tg-bot/
    nano .env  # Fill in necessary variables
    ```
 
-2. **Deploy**
-   ```bash
-   docker compose up -d --build
-   ```
+2. **Deploy** 
    
+   Pre-built image:
+   ```bash
+   docker compose up -d --pull always
+   ```
+   Build locally:
+   ```bash
+   docker compose -f docker-compose.dev.yml up -d --build
+   ```
