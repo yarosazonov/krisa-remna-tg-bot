@@ -11,7 +11,7 @@ services:
     container_name: krisa-bot
     hostname: krisa-bot
     ports:
-      - "8080:8080"
+      - "4000:4000"
     env_file:
       - .env
     volumes:
@@ -19,13 +19,13 @@ services:
       - bot-db:/app/data/db
       - ./data/logs:/app/data/logs  
     # network_mode: host
-    networks:
-      - remnawave-network
-    restart: unless-stopped
+    # networks:
+    #   - remnawave-network
+    # restart: unless-stopped
 
-networks:
-  remnawave-network:
-    external: true
+# networks:
+#   remnawave-network:
+#     external: true
 
 volumes:
   bot-db:
