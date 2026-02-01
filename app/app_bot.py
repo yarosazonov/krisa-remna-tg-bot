@@ -40,8 +40,8 @@ def create_app(settings):
         try:
             logger.info("Starting bot setup...")
             bot, dp = await init_bot(settings, remnawave_service=remnawave_service, yookassa_service=yookassa_service)
-            await bot.set_webhook(settings.WEBHOOK_URL, secret_token=settings.WEBHOOK_SECRET)
-            logger.info(f"Webhook set to: {settings.WEBHOOK_URL}")
+            await bot.set_webhook(settings.TG_WEBHOOK_URL, secret_token=settings.TG_WEBHOOK_SECRET)
+            logger.info(f"Webhook set to: {settings.TG_WEBHOOK_URL}")
             yield
         except Exception as e:
             logger.error(f"Error during bot setup: {e}")
@@ -65,10 +65,10 @@ def create_app(settings):
     # Telegram webhook
     #
     #
-    @app.post(settings.WEBHOOK_PATH)
+    @app.post(settings.TG_WEBHOOK_PATH)
     async def webhook(request: Request, x_telegram_bot_api_secret_token: str = Header()):
         """Handle incoming Telegram updates via webhook."""
-        if x_telegram_bot_api_secret_token != settings.WEBHOOK_SECRET:
+        if x_telegram_bot_api_secret_token != settings.TG_WEBHOOK_SECRET:
             logger.warning("Unauthorized Telegram webhook request")
             raise HTTPException(status_code=403, detail="Forbidden")
         

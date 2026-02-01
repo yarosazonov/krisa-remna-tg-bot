@@ -16,9 +16,9 @@ class Settings(BaseSettings):
     CHANNEL_TAG: str
 
     # FastAPI
-    DOMAIN: str
-    WEBHOOK_PATH: str
-    WEBHOOK_SECRET: str
+    BOT_BASE_URL: str
+    TG_WEBHOOK_PATH: str
+    TG_WEBHOOK_SECRET: str
     YOOKASSA_WEBHOOK_PATH: str
     PORT: int
     HOST: str
@@ -57,8 +57,8 @@ class Settings(BaseSettings):
 
     # decorator that let's call the method like an attribute
     @property
-    def WEBHOOK_URL(self) -> str:
-        return f"{self.DOMAIN.rstrip('/')}{self.WEBHOOK_PATH}"
+    def TG_WEBHOOK_URL(self) -> str:
+        return f"{self.BOT_BASE_URL.rstrip('/')}{self.TG_WEBHOOK_PATH}"
 
     # .env Should be located relative to the python file which calls get_settings().
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
