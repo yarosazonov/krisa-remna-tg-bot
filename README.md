@@ -40,7 +40,7 @@ krisa-remna-tg-bot/
 
 1. **Environment Variables**
    ```bash
-   cp .env.template .env
+   cp .env.example .env
    nano .env  # Fill in necessary variables
    ```
 
