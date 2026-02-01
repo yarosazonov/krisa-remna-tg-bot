@@ -82,7 +82,10 @@ def format_subscription_status(user_data: Dict[str, Any]) -> str:
             if traffic_limit and traffic_limit > 0:
                 # Convert bytes to GB
                 traffic_limit_gb = bytes_to_gb(traffic_limit)
-                used_traffic = user_data.get('usedTrafficBytes', 0)
+                
+                user_traffic = user_data.get('userTraffic') or {}
+                used_traffic = user_traffic.get('usedTrafficBytes', 0)
+
                 used_traffic_gb = bytes_to_gb(used_traffic)
                 status_text += f"\nРасход трафика: <b>{used_traffic_gb:.2f}</b> из <b>{traffic_limit_gb:.2f}</b> ГБ\n"
             else:
