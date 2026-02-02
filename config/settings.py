@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     HOST: str
 
     # Remna
-    REMNAWAVE_API_URL: str
+    REMNAWAVE_PANEL_DOMAIN: str
     REMNAWAVE_API_TOKEN: str
     SQUADS: str
     AVAILABLE_SERVERS: str
@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     @property
     def TG_WEBHOOK_URL(self) -> str:
         return f"{self.BOT_BASE_URL.rstrip('/')}{self.TG_WEBHOOK_PATH}"
+
+    @property
+    def REMNAWAVE_API_URL(self) -> str:
+        return f"https://{self.REMNAWAVE_PANEL_DOMAIN}/api"
 
     # .env Should be located relative to the python file which calls get_settings().
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

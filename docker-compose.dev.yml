@@ -14,18 +14,18 @@ services:
       - "4000:4000"
     env_file:
       - .env
+    #extra_hosts:
+    #  - "host.docker.internal:host-gateway"
     volumes:
       # named volume for db and host bind mount for logs
       - bot-db:/app/data/db
-      - ./data/logs:/app/data/logs  
-    # network_mode: host
-    # networks:
-    #   - remnawave-network
-    # restart: unless-stopped
+      - ./data/logs:/app/data/logs
+    networks:
+      - remnawave-network
 
-# networks:
-#   remnawave-network:
-#     external: true
+networks:
+  remnawave-network:
+    external: true
 
 volumes:
   bot-db:
