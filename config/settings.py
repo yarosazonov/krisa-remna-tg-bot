@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     CHANNEL_TAG: str
 
     # FastAPI
-    BOT_BASE_URL: str
+    BOT_DOMAIN: str
     TG_WEBHOOK_PATH: str
     TG_WEBHOOK_SECRET: str
     YOOKASSA_WEBHOOK_PATH: str
@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     # decorator that let's call the method like an attribute
     @property
     def TG_WEBHOOK_URL(self) -> str:
-        return f"{self.BOT_BASE_URL.rstrip('/')}{self.TG_WEBHOOK_PATH}"
+        return f"https://{self.BOT_DOMAIN}{self.TG_WEBHOOK_PATH}"
 
     @property
     def REMNAWAVE_API_URL(self) -> str:
