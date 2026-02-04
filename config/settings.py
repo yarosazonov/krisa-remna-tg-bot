@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     TG_WEBHOOK_SECRET: str
     YOOKASSA_WEBHOOK_PATH: str
     PORT: int
-    HOST: str
+    HOST: str = '0.0.0.0'
 
     # Remna
     REMNAWAVE_PANEL_DOMAIN: str
@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     YOOKASSA_RETURN_URL: Optional[str] = None
     YOOKASSA_DEFAULT_RECEIPT_EMAIL: Optional[str] = None
     YOOKASSA_VAT_CODE: int = 1
-    YOOKASSA_PAYMENT_MODE: str = "full_prepayment"
+    YOOKASSA_PAYMENT_MODE: str = "full_payment"
     YOOKASSA_PAYMENT_SUBJECT: str = "service"
 
     # Subscription parameters
