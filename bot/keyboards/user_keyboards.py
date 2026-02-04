@@ -10,9 +10,11 @@ def get_main_menu_keyboard(show_trial: bool):
         [
             InlineKeyboardButton(text="🤑 Бонусы 10%", callback_data="bonus_menu"),
             InlineKeyboardButton(text="💰 Баланс", callback_data="balance_menu")
-        ],
-        [InlineKeyboardButton(text="💬 Поддержка", url=settings.SUPPORT_TG_LINK)]
+        ]
     ]
+
+    if settings.SUPPORT_TG_LINK:
+        keyboard.append([InlineKeyboardButton(text="💬 Поддержка", url=settings.SUPPORT_TG_LINK)])
 
     if show_trial:
         keyboard.insert(1, [InlineKeyboardButton(text="☀ Активировать пробный период", callback_data="trial_menu")])
@@ -47,7 +49,8 @@ def get_sub_keyboard(is_sub_found: bool = True):
         keyboard.insert(0, [InlineKeyboardButton(text="🐣 Обновить ссылку", callback_data="update_sub")])
     else:
         settings = get_settings()
-        keyboard.insert(0, [InlineKeyboardButton(text="💬 Написать в поддержку", url=settings.SUPPORT_TG_LINK)])
+        if settings.SUPPORT_TG_LINK:
+            keyboard.insert(0, [InlineKeyboardButton(text="💬 Написать в поддержку", url=settings.SUPPORT_TG_LINK)])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
