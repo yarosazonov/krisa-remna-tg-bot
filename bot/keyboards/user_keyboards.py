@@ -46,12 +46,21 @@ def get_sub_keyboard(is_sub_found: bool = True):
     ]
 
     if is_sub_found:
-        keyboard.insert(0, [InlineKeyboardButton(text="🐣 Обновить ссылку", callback_data="update_sub")])
+        keyboard.insert(0, [InlineKeyboardButton(text="🔒 Безопасность", callback_data="security_menu")])
     else:
         settings = get_settings()
         if settings.SUPPORT_TG_LINK:
             keyboard.insert(0, [InlineKeyboardButton(text="💬 Написать в поддержку", url=settings.SUPPORT_TG_LINK)])
 
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_security_keyboard():
+    keyboard = [
+        [InlineKeyboardButton(text="🐣 Обновить подписку", callback_data="update_sub")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="sub_menu")],
+        [InlineKeyboardButton(text="🏡 Главное меню", callback_data="main_menu")]
+    ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 

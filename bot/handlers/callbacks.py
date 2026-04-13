@@ -4,7 +4,7 @@ from aiogram.utils.deep_linking import create_start_link
 from config import get_logger, get_settings
 
 from db import revoke_trial, get_user, get_referees, update_user, deduct_balance
-from bot.keyboards.user_keyboards import get_main_menu_keyboard, get_sub_keyboard, get_buy_keyboard, get_trial_keyboard
+from bot.keyboards.user_keyboards import get_main_menu_keyboard, get_sub_keyboard, get_security_keyboard, get_buy_keyboard, get_trial_keyboard
 from bot.middlewares.id_check_middleware import UserIDMiddleware
 from bot.services import RemnawaveService, YooKassaService
 from bot.handlers import WELCOME_TEXT
@@ -89,14 +89,13 @@ async def sub_callback(callback: types.CallbackQuery) -> None:
     """Regenerates the sub link"""
     keyboard = [
         [InlineKeyboardButton(text="☑ Да", callback_data="confirm_update_sub")],        
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data="sub_menu")]
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="security_menu")],
+        [InlineKeyboardButton(text="🏡 Главное меню", callback_data="main_menu")]
     ]
 
     await callback.message.edit_text(
-        "📡 <b>Почему стоит обновить ссылку?</b>\n"
-        "Это полезно, если вы считаете, что кто-то пользуется вашей ссылкой без разрешения.\n\n"
         "⚠ <b>После обновления:</b>\n"
-        "Придётся вручную добавить новую ссылку на всех устройствах.\n\n"
+        "Придётся вручную <b>удалить старую</b> подписку и <b>добавить новую</b> на всех устройствах.\n\n"
         "❓ Хотите продолжить?",
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard)
@@ -107,7 +106,24 @@ async def sub_callback(callback: types.CallbackQuery) -> None:
 @router.callback_query(F.data == "confirm_update_sub")
 async def confirm_update_sub(callback: types.CallbackQuery, telegram_id: int, remnawave_service: RemnawaveService):
     await remnawave_service.update_subscription(telegram_id=telegram_id)
-    await callback.answer("Ссылка успешно обновлена!", show_alert=True)
+    await callback.answer("Подписка успешно обновлена!", show_alert=True)
+
+
+
+# =================
+# Security menu callback
+# =================
+@router.callback_query(F.data == "security_menu")
+async def security_menu_callback(callback: types.CallbackQuery):
+    await callback.message.edit_text(
+        "🔒 <b>Безопасность</b>\n"
+        "Здесь вы можете управлять безопасностью вашей подписки.\n\n"
+        "📡 <b>Почему стоит обновить подписку?</b>\n"
+        "Это полезно, если вы считаете, что кто-то пользуется вашим профилем без разрешения.\n",
+        parse_mode="HTML",
+        reply_markup=get_security_keyboard()
+    )
+    await callback.answer()
 
 
 
