@@ -8,7 +8,7 @@ from bot.keyboards.user_keyboards import get_main_menu_keyboard, get_sub_keyboar
 from bot.middlewares.id_check_middleware import UserIDMiddleware
 from bot.services import RemnawaveService, YooKassaService
 from bot.handlers import WELCOME_TEXT
-from helpers import get_subscription_map, months_to_days
+from helpers import get_price_map, months_to_days
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -74,9 +74,10 @@ async def sub_callback(callback: types.CallbackQuery, telegram_id: int, remnawav
     except Exception as e:
         logger.error(f"Error handling /status command from user {telegram_id}: {e}")
         await callback.message.edit_text(
-            "❌ **Ошибка**\n\n"
+            "❌ <b>Ошибка</b>\n\n"
             "В данный момент невозможно получить статус подписки.\n"
-            "Попробуйте позже или обратитесь в поддержку."
+            "Попробуйте позже или обратитесь в поддержку.",
+            parse_mode="HTML"
         )
 
 
@@ -150,7 +151,9 @@ async def buy_callback(callback: types.CallbackQuery):
             enable_6_months=settings.ENABLE_6_MONTHS,
             rub_price_1_month=settings.RUB_PRICE_1_MONTH,
             rub_price_3_months=settings.RUB_PRICE_3_MONTHS,
-            rub_price_6_months=settings.RUB_PRICE_6_MONTHS)
+            rub_price_6_months=settings.RUB_PRICE_6_MONTHS,
+            enable_reset_traffic=settings.ENABLE_RESET_TRAFFIC,
+            rub_price_reset_traffic=settings.RUB_PRICE_RESET_TRAFFIC)
     )
     await callback.answer()
 
@@ -225,7 +228,7 @@ async def payment_prep_callback(callback: types.CallbackQuery, telegram_id: int,
         # Parse subscription period from callback data
         subscription_period = callback.data.replace("prepare_", "")
 
-        subscription_map = get_subscription_map(settings)
+        subscription_map = get_price_map(settings)
 
         if subscription_period not in subscription_map:
             await callback.message.edit_text("❌ Неверный период подписки")
@@ -243,6 +246,7 @@ async def payment_prep_callback(callback: types.CallbackQuery, telegram_id: int,
         if balance > 0:
             keys.append([InlineKeyboardButton(text="💱 Списать средства с баланса", callback_data=f"pay_{subscription_period}_part")])
         keys.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="buy_menu")])
+        keys.append([InlineKeyboardButton(text="🏡 Главное меню", callback_data="main_menu")])
 
         await callback.message.edit_text(
             f"📋 <b>Детали заказа:</b>\n\n"
@@ -273,7 +277,7 @@ async def payment_callback(
     ):
     try:
         user_tag = callback.from_user.username or "tg"
-        subscription_map = get_subscription_map(settings)
+        subscription_map = get_price_map(settings)
 
         # Parse callback: pay_1_month_full → ["pay", "1_month", "full"]
         parts = callback.data.split("_")
@@ -378,7 +382,9 @@ async def payment_callback(
                     enable_6_months=settings.ENABLE_6_MONTHS,
                     rub_price_1_month=settings.RUB_PRICE_1_MONTH,
                     rub_price_3_months=settings.RUB_PRICE_3_MONTHS,
-                    rub_price_6_months=settings.RUB_PRICE_6_MONTHS
+                    rub_price_6_months=settings.RUB_PRICE_6_MONTHS,
+                    enable_reset_traffic=settings.ENABLE_RESET_TRAFFIC,
+                    rub_price_reset_traffic=settings.RUB_PRICE_RESET_TRAFFIC
                 )
             )
             return
@@ -394,7 +400,9 @@ async def payment_callback(
                     enable_6_months=settings.ENABLE_6_MONTHS,
                     rub_price_1_month=settings.RUB_PRICE_1_MONTH,
                     rub_price_3_months=settings.RUB_PRICE_3_MONTHS,
-                    rub_price_6_months=settings.RUB_PRICE_6_MONTHS
+                    rub_price_6_months=settings.RUB_PRICE_6_MONTHS,
+                    enable_reset_traffic=settings.ENABLE_RESET_TRAFFIC,
+                    rub_price_reset_traffic=settings.RUB_PRICE_RESET_TRAFFIC
                 )
             )
             return
@@ -403,7 +411,8 @@ async def payment_callback(
         payment_keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="💳 Оплатить", url=confirmation_url)],
             [InlineKeyboardButton(text="🔍 Проверить оплату", callback_data=f"check_payment_{payment_result['id']}")],
-            [InlineKeyboardButton(text="⬅️ Назад", callback_data="buy_menu")]
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="buy_menu")],
+            [InlineKeyboardButton(text="🏡 Главное меню", callback_data="main_menu")]
         ])
 
         await callback.message.edit_text(

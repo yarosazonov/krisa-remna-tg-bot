@@ -23,18 +23,24 @@ def get_main_menu_keyboard(show_trial: bool):
 
 
 
-def get_buy_keyboard(enable_1_month: bool, enable_3_months: bool, enable_6_months: bool, rub_price_1_month: int, rub_price_3_months: int, rub_price_6_months: int, currency: str = 'RUB'):
+def get_buy_keyboard(enable_1_month: bool, enable_3_months: bool, enable_6_months: bool, rub_price_1_month: int, rub_price_3_months: int, rub_price_6_months: int, enable_reset_traffic: bool = False, rub_price_reset_traffic: int = 0, currency: str = 'RUB'):
     keyboard = [
         [InlineKeyboardButton(text="❓ Почему трафик ограничен?", callback_data="traffic_question")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="main_menu")]
     ]
 
+    index = 0
     if enable_1_month:
-        keyboard.insert(0, [InlineKeyboardButton(text=f"💵 1 месяц: {rub_price_1_month} {currency}", callback_data="prepare_1_month")])
+        keyboard.insert(index, [InlineKeyboardButton(text=f"💵 1 месяц: {rub_price_1_month} {currency}", callback_data="prepare_1_month")])
+        index += 1
     if enable_3_months:
-        keyboard.insert(1, [InlineKeyboardButton(text=f"💰 3 месяца: {rub_price_3_months} {currency}", callback_data="prepare_3_months")])
+        keyboard.insert(index, [InlineKeyboardButton(text=f"💰 3 месяца: {rub_price_3_months} {currency}", callback_data="prepare_3_months")])
+        index += 1
     if enable_6_months:
-        keyboard.insert(2, [InlineKeyboardButton(text=f"👑 6 месяцев: {rub_price_6_months} {currency}", callback_data="prepare_6_months")])
+        keyboard.insert(index, [InlineKeyboardButton(text=f"👑 6 месяцев: {rub_price_6_months} {currency}", callback_data="prepare_6_months")])
+        index += 1
+    if enable_reset_traffic:
+        keyboard.insert(index, [InlineKeyboardButton(text=f"🔄 Сброс трафика: {rub_price_reset_traffic} {currency}", callback_data="prepare_reset_traffic")])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
@@ -47,8 +53,9 @@ def get_sub_keyboard(is_sub_found: bool = True):
 
     if is_sub_found:
         keyboard.insert(0, [InlineKeyboardButton(text="🔒 Безопасность", callback_data="security_menu")])
+        if settings.ENABLE_RESET_TRAFFIC:
+            keyboard.insert(0, [InlineKeyboardButton(text="🔄 Сбросить трафик", callback_data="prepare_reset_traffic")])
     else:
-        settings = get_settings()
         if settings.SUPPORT_TG_LINK:
             keyboard.insert(0, [InlineKeyboardButton(text="💬 Написать в поддержку", url=settings.SUPPORT_TG_LINK)])
 

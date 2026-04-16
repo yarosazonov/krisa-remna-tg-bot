@@ -468,3 +468,40 @@ class RemnawaveService:
         except Exception as e:
             logger.error(f"Unexpected error while fetching user data for tg_id: {telegram_id}: {e}")
             return None
+
+    # =====================
+    # Resets user traffic
+    # =====================
+    async def reset_user_traffic(self, telegram_id: int):
+        user_info = await self._get_user_by_telegram_id(tg_id=telegram_id)
+        if not user_info:
+            logger.warning(f"Cannot reset traffic: User {telegram_id} not found.")
+            return None
+
+        uuid = user_info.get("uuid")
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                url = f"{self.api_url}/users/{uuid}/actions/reset-traffic"
+
+                response = await client.post(url, headers=self.headers, timeout=TIMEOUT_SECONDS)
+
+                if response.status_code == 200:
+                    logger.info(f"Successfully reset traffic for user with tg_id: {telegram_id}")
+                    return True
+                elif response.status_code == 404:
+                    logger.info(f"Wasn't able to reset traffic, user not found for tg_id: {telegram_id}")
+                    return None
+                else:
+                    logger.error(f"Reset traffic API request failed with status {response.status_code}: {response.text}")
+                    return None
+            
+        except httpx.TimeoutException:
+            logger.error(f"Timeout while resetting traffic for tg_id: {telegram_id}")
+            return None
+        except httpx.RequestError as e:
+            logger.error(f"Request error while resetting traffic for tg_id: {telegram_id}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error while resetting traffic for tg_id: {telegram_id}: {e}")
+            return None

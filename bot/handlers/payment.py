@@ -4,7 +4,7 @@ from aiogram import Bot
 from config import get_logger, get_settings
 from bot.services import RemnawaveService, YooKassaService, balance_credit_notify
 from db import get_user, update_user, check_payment_processed, add_processed_payment, deduct_balance
-from helpers import months_to_days, get_subscription_map
+from helpers import months_to_days, get_price_map
 
 logger = get_logger(__name__)
 
@@ -53,7 +53,7 @@ async def handle_yookassa_update(
             tg_id_str = metadata.get("telegram_id")
             subscription_months_str = metadata.get("subscription_months")
 
-            if not tg_id_str or not subscription_months_str:
+            if not tg_id_str or subscription_months_str is None:
                 logger.error(f"Missing metadata in verified payment {payment_id}: {metadata}")
                 return
 
@@ -75,7 +75,7 @@ async def handle_yookassa_update(
             user = await get_user(telegram_id=tg_id)
             
             # Determine Expected Price
-            subscription_map = get_subscription_map(settings)
+            subscription_map = get_price_map(settings)
             expected_price = None
             
             # Find the price for the given number of months
@@ -152,18 +152,28 @@ async def handle_yookassa_update(
 
             # 6. Trigger the payment handling
             #
-            try:
-                await remnawave_service.handle_payment(
-                    tg_id=tg_id,
-                    tg_tag=tg_tag,
-                    subscription_days=subscription_days
-                )
-            except Exception as e:
-                logger.error(f"Failed to grant subscription via Remnawave for {tg_id}: {e}. REFUNDING BALANCE.")
-                if balance_deducted > 0:
-                    await update_user(telegram_id=tg_id, balance_increment=balance_deducted)
-                    logger.info(f"Refunded {balance_deducted} to user {tg_id}")
-                return
+            if subscription_months == 0:
+                try:
+                    await remnawave_service.reset_user_traffic(telegram_id=tg_id)
+                except Exception as e:
+                    logger.error(f"Failed to reset traffic via Remnawave for {tg_id}: {e}. REFUNDING BALANCE.")
+                    if balance_deducted > 0:
+                        await update_user(telegram_id=tg_id, balance_increment=balance_deducted)
+                        logger.info(f"Refunded {balance_deducted} to user {tg_id}")
+                    return
+            else:
+                try:
+                    await remnawave_service.handle_payment(
+                        tg_id=tg_id,
+                        tg_tag=tg_tag,
+                        subscription_days=subscription_days
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to grant subscription via Remnawave for {tg_id}: {e}. REFUNDING BALANCE.")
+                    if balance_deducted > 0:
+                        await update_user(telegram_id=tg_id, balance_increment=balance_deducted)
+                        logger.info(f"Refunded {balance_deducted} to user {tg_id}")
+                    return
 
             # Updating referrers internal balance
             user_referrer_id = user.referrer_id

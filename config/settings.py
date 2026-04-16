@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     ENABLE_6_MONTHS: bool
     RUB_PRICE_6_MONTHS: int
 
+    ENABLE_RESET_TRAFFIC: bool
+    RUB_PRICE_RESET_TRAFFIC: int
+
     # decorator that let's call the method like an attribute
     @property
     def TG_WEBHOOK_URL(self) -> str:

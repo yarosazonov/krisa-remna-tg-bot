@@ -20,7 +20,7 @@ def mb_to_bytes(mb_value: float) -> int:
 
 
 
-def get_subscription_map(settings):
+def get_price_map(settings):
     return {
         "1_month": {
             "months": 1,
@@ -36,6 +36,11 @@ def get_subscription_map(settings):
             "months": 6,
             "price": settings.RUB_PRICE_6_MONTHS,
             "description": "Подписка на 6 месяцев"
+        },
+        "reset_traffic": {
+            "months": 0,
+            "price": settings.RUB_PRICE_RESET_TRAFFIC,
+            "description": "Сброс трафика"
         }
     }
 
