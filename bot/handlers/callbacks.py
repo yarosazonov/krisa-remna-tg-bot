@@ -553,7 +553,7 @@ async def bonus_menu_callback(callback: types.CallbackQuery, telegram_id: int, b
         "Поделитесь с человеком вашей <b>реферальной ссылкой</b>.\n"
         "Если он впервые запустит бот — "
         "он станет вашим рефералом!\n\n"
-        f"👉 <b>Реферальная ссылка:</b>\n<code>{referral_link}</code>",
+        f"👉 <b>Реферальная ссылка:</b>\n(Нажмите на ссылку чтобы скопировать)\n<code>{referral_link}</code>",
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=keys)
     )

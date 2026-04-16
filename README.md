@@ -7,6 +7,8 @@ Telegram bot for managing VPN subscriptions via **Remnawave Panel**.
 - **Panel sync** - Sync bot database with Remnawave panel
 - **Trial activation** - One-time trial for new users
 - **Status check** - View current subscription details
+- **Security controls** - Allows users to update their sub link
+- **Traffic reset** - Users can wipe their traffic usage limit via payment 
 - **Payment service integration** - YooKassa
 - **Webhook integration** - Receives panel & payment webhooks
 - **Referral system** - Invite friends and earn balance for their purchases
