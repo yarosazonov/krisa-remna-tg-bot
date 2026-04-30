@@ -55,6 +55,7 @@ def get_sub_keyboard(is_sub_found: bool = True):
         keyboard.insert(0, [InlineKeyboardButton(text="🔒 Безопасность", callback_data="security_menu")])
         if settings.ENABLE_RESET_TRAFFIC:
             keyboard.insert(0, [InlineKeyboardButton(text="🔄 Сбросить трафик", callback_data="prepare_reset_traffic")])
+        keyboard.insert(0, [InlineKeyboardButton(text="🔥 Продлить подписку", callback_data="buy_menu")])
     else:
         if settings.SUPPORT_TG_LINK:
             keyboard.insert(0, [InlineKeyboardButton(text="💬 Написать в поддержку", url=settings.SUPPORT_TG_LINK)])
