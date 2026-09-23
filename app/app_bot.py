@@ -172,16 +172,18 @@ def create_app(settings):
         payload = json.loads(body)
         event = payload.get("event")
         logger.info(f"Remna webhook event: {event}")
-        if event not in ("user.expires_in_24_hours", "user.expired", "user.limited"):
+        if event not in ("user.expiration", "user.expired", "user.limited"):
             return {"status": "ok"}
         user = payload.get("data", {})
         telegram_id = user.get("telegramId")
 
         if not telegram_id:
-            logger.warning(f"No Telegram ID for user {user.get('uuid')}, skipping message.")
+            user_ref = user.get("id") or user.get("uuid")
+            logger.warning(f"No Telegram ID for user {user_ref}, skipping message.")
             return {"status": "ok"}
 
-        asyncio.create_task(remnawave_webhook_notification(bot=bot, telegram_id=telegram_id, event=event))
+        meta = payload.get("meta")
+        asyncio.create_task(remnawave_webhook_notification(bot=bot, telegram_id=telegram_id, event=event, meta=meta))
         return {"status": "ok"}
 
 
